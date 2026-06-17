@@ -2,7 +2,7 @@
 
 Safe, smart dev-disk reclaimer — winnow the chaff from your projects.
 
-> Status: v0.1, in active development.
+> Status: v0.2
 
 [![CI](https://github.com/Leartt1/chaff/actions/workflows/ci.yml/badge.svg)](https://github.com/Leartt1/chaff/actions/workflows/ci.yml)
 
@@ -29,12 +29,14 @@ The one rule: **never remove anything you can't get back.**
 - Sort and filter by **size**, **age**, and **type**.
 - One pass across all your projects, every ecosystem at once.
 - Covers node, rust, python (uv/pip/venv), next, nuxt, svelte, gradle, and dart.
+- Optionally sweep global caches too (`--caches`): npm, pnpm, yarn, pip, uv, cargo, go, gradle, maven, Hugging Face.
 
 ## Usage
 
 ```sh
 chaff scan                 # show reclaimable space, biggest first
 chaff scan ~/code ~/work   # scan specific roots
+chaff scan --caches        # include global package-manager caches
 
 chaff clean                # interactive picker — choose what to reclaim
 chaff clean --older-than 30d --type node   # targeted
@@ -43,7 +45,8 @@ chaff clean --all --apply  # reclaim everything safe, for real (to trash)
 
 ## Roadmap
 
-- Global package-manager caches: pnpm, pip, cargo, Hugging Face
+- Config file + per-project ignore rules
+- Scheduled / automatic reclaim
 
 ## Install
 

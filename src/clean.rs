@@ -1,5 +1,5 @@
 use crate::model::Reclaimable;
-use crate::{gitinfo, report, scan, tui};
+use crate::{caches, gitinfo, report, scan, tui};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -10,6 +10,7 @@ pub struct CleanOptions {
     pub all: bool,
     pub apply: bool,
     pub force: bool,
+    pub include_caches: bool,
 }
 
 /// Why an item was excluded from cleaning.
@@ -48,6 +49,16 @@ pub fn eligible(item: &Reclaimable, opts: &CleanOptions) -> Result<(), Skip> {
     Ok(())
 }
 
+/// Scan the roots, plus global caches if requested, sorted largest-first.
+fn collect(roots: &[PathBuf], include_caches: bool) -> Vec<Reclaimable> {
+    let mut items = scan::scan(roots);
+    if include_caches {
+        items.extend(caches::scan_caches());
+    }
+    items.sort_by_key(|i| std::cmp::Reverse(i.size));
+    items
+}
+
 /// Apply the configured filters, returning kept items and the count protected
 /// for containing git-tracked files.
 fn filter(items: Vec<Reclaimable>, opts: &CleanOptions) -> (Vec<Reclaimable>, u32) {
@@ -78,19 +89,22 @@ fn delete_all(items: &[Reclaimable]) -> (u64, u32) {
     (reclaimed, count)
 }
 
+fn report_nothing(tracked: u32) {
+    let note = if tracked > 0 {
+        format!(" ({tracked} protected: git-tracked)")
+    } else {
+        String::new()
+    };
+    println!("Nothing to clean.{note}");
+}
+
 /// Non-interactive scan, filter, preview, and (with `--apply`) reclaim.
 pub fn run(roots: &[PathBuf], opts: &CleanOptions) -> anyhow::Result<()> {
-    let mut items = scan::scan(roots);
-    items.sort_by_key(|i| std::cmp::Reverse(i.size));
+    let items = collect(roots, opts.include_caches);
     let (chosen, tracked) = filter(items, opts);
 
     if chosen.is_empty() {
-        let note = if tracked > 0 {
-            format!(" ({tracked} protected: git-tracked)")
-        } else {
-            String::new()
-        };
-        println!("Nothing to clean.{note}");
+        report_nothing(tracked);
         return Ok(());
     }
 
@@ -121,26 +135,20 @@ pub fn run(roots: &[PathBuf], opts: &CleanOptions) -> anyhow::Result<()> {
 }
 
 /// Interactive picker: scan, apply safety, let the user choose, then reclaim.
-pub fn run_interactive(roots: &[PathBuf], force: bool) -> anyhow::Result<()> {
-    let mut items = scan::scan(roots);
-    items.sort_by_key(|i| std::cmp::Reverse(i.size));
-
+pub fn run_interactive(roots: &[PathBuf], force: bool, include_caches: bool) -> anyhow::Result<()> {
+    let items = collect(roots, include_caches);
     let opts = CleanOptions {
         older_than: None,
         types: vec![],
         all: true,
         apply: true,
         force,
+        include_caches,
     };
     let (chosen, tracked) = filter(items, &opts);
 
     if chosen.is_empty() {
-        let note = if tracked > 0 {
-            format!(" ({tracked} protected: git-tracked)")
-        } else {
-            String::new()
-        };
-        println!("Nothing to clean.{note}");
+        report_nothing(tracked);
         return Ok(());
     }
 
@@ -182,6 +190,7 @@ mod tests {
             all: true,
             apply: false,
             force: true, // skip the git check in unit tests
+            include_caches: false,
         }
     }
 
@@ -203,5 +212,17 @@ mod tests {
         assert_eq!(eligible(&it, &o), Ok(()));
         o.older_than = Some(Duration::from_secs(100 * 86_400));
         assert_eq!(eligible(&it, &o), Err(Skip::TooNew));
+    }
+
+    #[test]
+    fn cache_type_filter_matches_tool() {
+        let it = item("cache", "cargo", 1);
+        let mut o = opts();
+        o.types = vec!["cache".to_string()];
+        assert_eq!(eligible(&it, &o), Ok(()));
+        o.types = vec!["cargo".to_string()];
+        assert_eq!(eligible(&it, &o), Ok(()));
+        o.types = vec!["node".to_string()];
+        assert_eq!(eligible(&it, &o), Err(Skip::WrongType));
     }
 }

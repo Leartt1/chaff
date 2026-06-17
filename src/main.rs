@@ -1,3 +1,4 @@
+mod caches;
 mod clean;
 mod gitinfo;
 mod model;
@@ -26,6 +27,9 @@ enum Command {
     Scan {
         /// Roots to scan (defaults to the current directory).
         paths: Vec<PathBuf>,
+        /// Also include global package-manager caches.
+        #[arg(long)]
+        caches: bool,
     },
     /// Reclaim space — interactive picker by default; flags for scripting.
     Clean {
@@ -34,7 +38,7 @@ enum Command {
         /// Reclaim everything that passes the safety checks.
         #[arg(long)]
         all: bool,
-        /// Limit to these ecosystems/types, comma-separated (e.g. node,rust).
+        /// Limit to these ecosystems/types, comma-separated (e.g. node,rust,cache).
         #[arg(long = "type", value_delimiter = ',')]
         types: Vec<String>,
         /// Only items untouched for at least this long (e.g. 30d, 2w, 6mo).
@@ -46,15 +50,21 @@ enum Command {
         /// Include items containing git-tracked files (off by default).
         #[arg(long)]
         force: bool,
+        /// Also include global package-manager caches.
+        #[arg(long)]
+        caches: bool,
     },
 }
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
-        Command::Scan { paths } => {
+        Command::Scan { paths, caches } => {
             let roots = roots_or_cwd(paths)?;
             let mut items = scan::scan(&roots);
+            if caches {
+                items.extend(crate::caches::scan_caches());
+            }
             items.sort_by_key(|i| std::cmp::Reverse(i.size));
             report::print_table(&items);
         }
@@ -65,13 +75,14 @@ fn main() -> anyhow::Result<()> {
             older_than,
             apply,
             force,
+            caches,
         } => {
             let roots = roots_or_cwd(paths)?;
             let no_filters = !all && types.is_empty() && older_than.is_none();
 
             // Bare `chaff clean` in a terminal opens the interactive picker.
             if no_filters && !apply && std::io::stdout().is_terminal() {
-                clean::run_interactive(&roots, force)?;
+                clean::run_interactive(&roots, force, caches)?;
             } else {
                 let older_than = match older_than {
                     Some(s) => Some(util::parse_age(&s).ok_or_else(|| {
@@ -85,6 +96,7 @@ fn main() -> anyhow::Result<()> {
                     all,
                     apply,
                     force,
+                    include_caches: caches,
                 };
                 clean::run(&roots, &opts)?;
             }
