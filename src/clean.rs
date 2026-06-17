@@ -1,5 +1,5 @@
 use crate::model::Reclaimable;
-use crate::{gitinfo, report, scan};
+use crate::{gitinfo, report, scan, tui};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -48,11 +48,9 @@ pub fn eligible(item: &Reclaimable, opts: &CleanOptions) -> Result<(), Skip> {
     Ok(())
 }
 
-/// Scan, filter, preview, and (with `--apply`) reclaim.
-pub fn run(roots: &[PathBuf], opts: &CleanOptions) -> anyhow::Result<()> {
-    let mut items = scan::scan(roots);
-    items.sort_by_key(|i| std::cmp::Reverse(i.size));
-
+/// Apply the configured filters, returning kept items and the count protected
+/// for containing git-tracked files.
+fn filter(items: Vec<Reclaimable>, opts: &CleanOptions) -> (Vec<Reclaimable>, u32) {
     let mut chosen = Vec::new();
     let mut tracked = 0u32;
     for it in items {
@@ -62,6 +60,29 @@ pub fn run(roots: &[PathBuf], opts: &CleanOptions) -> anyhow::Result<()> {
             Err(_) => {}
         }
     }
+    (chosen, tracked)
+}
+
+fn delete_all(items: &[Reclaimable]) -> (u64, u32) {
+    let mut reclaimed = 0u64;
+    let mut count = 0u32;
+    for it in items {
+        match trash::delete(&it.path) {
+            Ok(()) => {
+                reclaimed += it.size;
+                count += 1;
+            }
+            Err(e) => eprintln!("  could not remove {}: {e}", it.path.display()),
+        }
+    }
+    (reclaimed, count)
+}
+
+/// Non-interactive scan, filter, preview, and (with `--apply`) reclaim.
+pub fn run(roots: &[PathBuf], opts: &CleanOptions) -> anyhow::Result<()> {
+    let mut items = scan::scan(roots);
+    items.sort_by_key(|i| std::cmp::Reverse(i.size));
+    let (chosen, tracked) = filter(items, opts);
 
     if chosen.is_empty() {
         let note = if tracked > 0 {
@@ -85,22 +106,54 @@ pub fn run(roots: &[PathBuf], opts: &CleanOptions) -> anyhow::Result<()> {
 
     let has_selection = opts.all || !opts.types.is_empty() || opts.older_than.is_some();
     if !has_selection {
-        anyhow::bail!("Refusing to clean everything without a filter. Pass --all (or --type / --older-than).");
+        anyhow::bail!(
+            "Refusing to clean everything without a filter. Pass --all (or --type / --older-than)."
+        );
     }
 
-    let mut reclaimed = 0u64;
-    let mut count = 0u32;
-    for it in &chosen {
-        match trash::delete(&it.path) {
-            Ok(()) => {
-                reclaimed += it.size;
-                count += 1;
-            }
-            Err(e) => eprintln!("  could not remove {}: {e}", it.path.display()),
-        }
-    }
+    let (reclaimed, count) = delete_all(&chosen);
     println!(
         "\nReclaimed {} from {} item(s) → trash.",
+        report::human(reclaimed),
+        count
+    );
+    Ok(())
+}
+
+/// Interactive picker: scan, apply safety, let the user choose, then reclaim.
+pub fn run_interactive(roots: &[PathBuf], force: bool) -> anyhow::Result<()> {
+    let mut items = scan::scan(roots);
+    items.sort_by_key(|i| std::cmp::Reverse(i.size));
+
+    let opts = CleanOptions {
+        older_than: None,
+        types: vec![],
+        all: true,
+        apply: true,
+        force,
+    };
+    let (chosen, tracked) = filter(items, &opts);
+
+    if chosen.is_empty() {
+        let note = if tracked > 0 {
+            format!(" ({tracked} protected: git-tracked)")
+        } else {
+            String::new()
+        };
+        println!("Nothing to clean.{note}");
+        return Ok(());
+    }
+
+    let picks = tui::select(&chosen)?;
+    if picks.is_empty() {
+        println!("Cancelled — nothing removed.");
+        return Ok(());
+    }
+
+    let selected: Vec<Reclaimable> = picks.into_iter().map(|i| chosen[i].clone()).collect();
+    let (reclaimed, count) = delete_all(&selected);
+    println!(
+        "Reclaimed {} from {} item(s) → trash.",
         report::human(reclaimed),
         count
     );

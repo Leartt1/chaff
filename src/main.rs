@@ -5,9 +5,11 @@ mod report;
 mod rules;
 mod scan;
 mod size;
+mod tui;
 mod util;
 
 use clap::{Parser, Subcommand};
+use std::io::IsTerminal;
 use std::path::PathBuf;
 
 /// Safe, smart dev-disk reclaimer — winnow the chaff from your projects.
@@ -25,7 +27,7 @@ enum Command {
         /// Roots to scan (defaults to the current directory).
         paths: Vec<PathBuf>,
     },
-    /// Reclaim space — previews by default; pass --apply to act.
+    /// Reclaim space — interactive picker by default; flags for scripting.
     Clean {
         /// Roots to scan (defaults to the current directory).
         paths: Vec<PathBuf>,
@@ -65,20 +67,27 @@ fn main() -> anyhow::Result<()> {
             force,
         } => {
             let roots = roots_or_cwd(paths)?;
-            let older_than = match older_than {
-                Some(s) => Some(util::parse_age(&s).ok_or_else(|| {
-                    anyhow::anyhow!("bad --older-than '{s}' (try 30d, 2w, 6mo)")
-                })?),
-                None => None,
-            };
-            let opts = clean::CleanOptions {
-                older_than,
-                types,
-                all,
-                apply,
-                force,
-            };
-            clean::run(&roots, &opts)?;
+            let no_filters = !all && types.is_empty() && older_than.is_none();
+
+            // Bare `chaff clean` in a terminal opens the interactive picker.
+            if no_filters && !apply && std::io::stdout().is_terminal() {
+                clean::run_interactive(&roots, force)?;
+            } else {
+                let older_than = match older_than {
+                    Some(s) => Some(util::parse_age(&s).ok_or_else(|| {
+                        anyhow::anyhow!("bad --older-than '{s}' (try 30d, 2w, 6mo)")
+                    })?),
+                    None => None,
+                };
+                let opts = clean::CleanOptions {
+                    older_than,
+                    types,
+                    all,
+                    apply,
+                    force,
+                };
+                clean::run(&roots, &opts)?;
+            }
         }
     }
     Ok(())

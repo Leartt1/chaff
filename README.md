@@ -4,6 +4,10 @@ Safe, smart dev-disk reclaimer — winnow the chaff from your projects.
 
 > Status: v0.1, in active development.
 
+[![CI](https://github.com/Leartt1/chaff/actions/workflows/ci.yml/badge.svg)](https://github.com/Leartt1/chaff/actions/workflows/ci.yml)
+
+![chaff in action](demo/demo.gif)
+
 Dev machines slowly fill with **regenerable** junk: `node_modules`, `target`,
 `.venv`, `__pycache__`, `dist`, `.next`, and bloated package-manager caches.
 It's all re-creatable, yet it quietly costs tens of gigabytes.
@@ -23,8 +27,8 @@ The one rule: **never remove anything you can't get back.**
 ## Smart
 
 - Sort and filter by **size**, **age**, and **type**.
-- Per-project artifacts _and_ global caches (pnpm, pip, cargo, Hugging Face).
-- Current ecosystem coverage: node/pnpm, python (incl. uv), rust, go, java, and more.
+- One pass across all your projects, every ecosystem at once.
+- Covers node, rust, python (uv/pip/venv), next, nuxt, svelte, gradle, and dart.
 
 ## Usage
 
@@ -32,10 +36,14 @@ The one rule: **never remove anything you can't get back.**
 chaff scan                 # show reclaimable space, biggest first
 chaff scan ~/code ~/work   # scan specific roots
 
-chaff clean                # preview everything reclaimable (dry run)
+chaff clean                # interactive picker — choose what to reclaim
 chaff clean --older-than 30d --type node   # targeted
 chaff clean --all --apply  # reclaim everything safe, for real (to trash)
 ```
+
+## Roadmap
+
+- Global package-manager caches: pnpm, pip, cargo, Hugging Face
 
 ## Install
 

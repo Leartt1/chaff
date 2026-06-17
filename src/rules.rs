@@ -12,17 +12,61 @@ pub struct Rule {
 }
 
 pub const RULES: &[Rule] = &[
-    Rule { dir: "node_modules", ecosystem: "node", requires_marker: &["package.json"] },
-    Rule { dir: "target", ecosystem: "rust", requires_marker: &["Cargo.toml"] },
-    Rule { dir: ".venv", ecosystem: "python", requires_marker: &[] },
-    Rule { dir: "venv", ecosystem: "python", requires_marker: &[] },
-    Rule { dir: "__pycache__", ecosystem: "python", requires_marker: &[] },
-    Rule { dir: ".next", ecosystem: "next.js", requires_marker: &[] },
-    Rule { dir: ".nuxt", ecosystem: "nuxt", requires_marker: &[] },
-    Rule { dir: ".svelte-kit", ecosystem: "svelte", requires_marker: &[] },
-    Rule { dir: ".gradle", ecosystem: "gradle", requires_marker: &[] },
-    Rule { dir: ".dart_tool", ecosystem: "dart", requires_marker: &[] },
-    Rule { dir: "dist", ecosystem: "js", requires_marker: &["package.json"] },
+    Rule {
+        dir: "node_modules",
+        ecosystem: "node",
+        requires_marker: &["package.json"],
+    },
+    Rule {
+        dir: "target",
+        ecosystem: "rust",
+        requires_marker: &["Cargo.toml"],
+    },
+    Rule {
+        dir: ".venv",
+        ecosystem: "python",
+        requires_marker: &[],
+    },
+    Rule {
+        dir: "venv",
+        ecosystem: "python",
+        requires_marker: &[],
+    },
+    Rule {
+        dir: "__pycache__",
+        ecosystem: "python",
+        requires_marker: &[],
+    },
+    Rule {
+        dir: ".next",
+        ecosystem: "next.js",
+        requires_marker: &[],
+    },
+    Rule {
+        dir: ".nuxt",
+        ecosystem: "nuxt",
+        requires_marker: &[],
+    },
+    Rule {
+        dir: ".svelte-kit",
+        ecosystem: "svelte",
+        requires_marker: &[],
+    },
+    Rule {
+        dir: ".gradle",
+        ecosystem: "gradle",
+        requires_marker: &[],
+    },
+    Rule {
+        dir: ".dart_tool",
+        ecosystem: "dart",
+        requires_marker: &[],
+    },
+    Rule {
+        dir: "dist",
+        ecosystem: "js",
+        requires_marker: &["package.json"],
+    },
     Rule {
         dir: "build",
         ecosystem: "build",
