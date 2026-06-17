@@ -17,7 +17,7 @@ The one rule: **never remove anything you can't get back.**
 
 - Deletes to the system **trash**, not `rm -rf` — recoverable if you change your mind.
 - Only touches known **regenerable** artifacts; never your source.
-- Skips projects with **uncommitted or unpushed** work unless you force it.
+- Never deletes **git-tracked** files — only true throwaway artifacts (`--force` to override).
 - **Dry-run by default** — `chaff clean` previews; nothing goes until you add `--apply`.
 
 ## Smart
@@ -32,7 +32,7 @@ The one rule: **never remove anything you can't get back.**
 chaff scan                 # show reclaimable space, biggest first
 chaff scan ~/code ~/work   # scan specific roots
 
-chaff clean                # interactive picker (preview only)
+chaff clean                # preview everything reclaimable (dry run)
 chaff clean --older-than 30d --type node   # targeted
 chaff clean --all --apply  # reclaim everything safe, for real (to trash)
 ```
