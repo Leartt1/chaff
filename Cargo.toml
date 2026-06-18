@@ -13,6 +13,7 @@ exclude = ["demo/", "docs/", ".github/"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
+clap_complete = "4"     # shell completion generation
 anyhow = "1"
 walkdir = "2"           # recursive directory walk (size + discovery)
 rayon = "1"             # parallel directory size calculation

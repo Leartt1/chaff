@@ -10,7 +10,8 @@ mod size;
 mod tui;
 mod util;
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::{generate, Shell};
 use std::io::IsTerminal;
 use std::path::PathBuf;
 
@@ -63,6 +64,11 @@ enum Command {
         /// Exclude global caches even if enabled in config.
         #[arg(long)]
         no_caches: bool,
+    },
+    /// Print a shell completion script (bash, zsh, fish, …).
+    Completions {
+        /// Shell to generate completions for.
+        shell: Shell,
     },
 }
 
@@ -153,6 +159,11 @@ fn main() -> anyhow::Result<()> {
                 clean::run(&roots, &opts, &settings.ignore)?;
             }
         }
+        Command::Completions { shell } => {
+            let mut cmd = Cli::command();
+            let name = cmd.get_name().to_string();
+            generate(shell, &mut cmd, name, &mut std::io::stdout());
+        }
     }
     Ok(())
 }
@@ -162,5 +173,15 @@ fn roots_or_cwd(paths: Vec<PathBuf>) -> anyhow::Result<Vec<PathBuf>> {
         Ok(vec![std::env::current_dir()?])
     } else {
         Ok(paths)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cli_definition_is_valid() {
+        Cli::command().debug_assert();
     }
 }
