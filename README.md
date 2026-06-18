@@ -29,7 +29,7 @@ The one rule: **never remove anything you can't get back.**
 
 - Sort and filter by **size**, **age**, and **type**.
 - One pass across all your projects, every ecosystem at once.
-- Covers node, rust, python, next, nuxt, svelte, gradle, dart, terraform, cocoapods, swift, elixir, haskell, zig, and .NET.
+- Covers node, rust, python, next, nuxt, svelte, gradle, dart, terraform, cocoapods, swift, elixir, haskell, zig, and .NET — plus tool caches (pytest, mypy, ruff, tox, turbo, parcel).
 - Optionally sweep global caches too (`--caches`): npm, pnpm, yarn, pip, uv, cargo, go, gradle, maven, Hugging Face, Xcode DerivedData, Homebrew, deno, composer.
 
 ## Usage
@@ -43,6 +43,8 @@ chaff scan --json | jq     # machine-readable output for scripts/CI
 chaff clean                # interactive picker — choose what to reclaim
 chaff clean --older-than 30d --type node   # targeted
 chaff clean --all --apply  # reclaim everything safe, for real (to trash)
+
+chaff completions zsh      # shell completions (bash/zsh/fish/elvish/powershell)
 ```
 
 ## Configuration
