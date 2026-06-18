@@ -59,6 +59,26 @@ const CACHES: &[CacheDef] = &[
         tool: "huggingface",
         rel: &[".cache/huggingface", "Library/Caches/huggingface"],
     },
+    CacheDef {
+        tool: "xcode",
+        rel: &["Library/Developer/Xcode/DerivedData"],
+    },
+    CacheDef {
+        tool: "homebrew",
+        rel: &["Library/Caches/Homebrew", ".cache/Homebrew"],
+    },
+    CacheDef {
+        tool: "deno",
+        rel: &["Library/Caches/deno", ".cache/deno", ".deno"],
+    },
+    CacheDef {
+        tool: "composer",
+        rel: &[
+            "Library/Caches/composer",
+            ".cache/composer",
+            ".composer/cache",
+        ],
+    },
 ];
 
 fn home() -> Option<PathBuf> {

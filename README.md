@@ -2,7 +2,7 @@
 
 Safe, smart dev-disk reclaimer — winnow the chaff from your projects.
 
-> Status: v0.2
+> Status: v0.3
 
 [![CI](https://github.com/Leartt1/chaff/actions/workflows/ci.yml/badge.svg)](https://github.com/Leartt1/chaff/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/chaff.svg)](https://crates.io/crates/chaff) [![downloads](https://img.shields.io/crates/d/chaff.svg)](https://crates.io/crates/chaff)
 
@@ -28,8 +28,8 @@ The one rule: **never remove anything you can't get back.**
 
 - Sort and filter by **size**, **age**, and **type**.
 - One pass across all your projects, every ecosystem at once.
-- Covers node, rust, python (uv/pip/venv), next, nuxt, svelte, gradle, and dart.
-- Optionally sweep global caches too (`--caches`): npm, pnpm, yarn, pip, uv, cargo, go, gradle, maven, Hugging Face.
+- Covers node, rust, python, next, nuxt, svelte, gradle, dart, terraform, cocoapods, swift, elixir, haskell, zig, and .NET.
+- Optionally sweep global caches too (`--caches`): npm, pnpm, yarn, pip, uv, cargo, go, gradle, maven, Hugging Face, Xcode DerivedData, Homebrew, deno, composer.
 
 ## Usage
 
