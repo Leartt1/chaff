@@ -4,7 +4,7 @@ Safe, smart dev-disk reclaimer — winnow the chaff from your projects.
 
 > Status: v0.2
 
-[![CI](https://github.com/Leartt1/chaff/actions/workflows/ci.yml/badge.svg)](https://github.com/Leartt1/chaff/actions/workflows/ci.yml)
+[![CI](https://github.com/Leartt1/chaff/actions/workflows/ci.yml/badge.svg)](https://github.com/Leartt1/chaff/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/chaff.svg)](https://crates.io/crates/chaff) [![downloads](https://img.shields.io/crates/d/chaff.svg)](https://crates.io/crates/chaff)
 
 ![chaff in action](demo/demo.gif)
 

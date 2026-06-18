@@ -8,38 +8,43 @@ Output demo/demo.gif
 
 Set Shell "bash"
 Set FontSize 18
-Set Width 1080
-Set Height 640
-Set Padding 18
+Set Width 1400
+Set Height 768
+Set Padding 20
 Set Theme "Dracula"
+Set TypingSpeed 55ms
 
-# --- hidden setup: a realistic junk tree + chaff on PATH ---
+# --- hidden setup: throwaway projects + fake caches, chaff on PATH ---
 Hide
 Type `export PATH="$PWD/target/release:$PATH"`
 Enter
-Type `rm -rf /tmp/chaff_demo && mkdir -p /tmp/chaff_demo/web/node_modules /tmp/chaff_demo/api/.venv /tmp/chaff_demo/cli/target`
+Type "bash demo/setup.sh"
 Enter
-Type `echo '{}' > /tmp/chaff_demo/web/package.json && : > /tmp/chaff_demo/cli/Cargo.toml`
-Enter
-Type `mkfile -n 420m /tmp/chaff_demo/web/node_modules/dep.bin; mkfile -n 210m /tmp/chaff_demo/cli/target/build.bin; mkfile -n 95m /tmp/chaff_demo/api/.venv/lib.bin`
-Enter
+Sleep 2s
 Type "clear"
 Enter
 Show
 
-# --- scan ---
-Type "chaff scan /tmp/chaff_demo"
+# --- scan projects ---
+Type "chaff scan /tmp/demo-projects"
 Enter
 Sleep 3s
 
+# --- and the caches other cleaners miss ---
+Type "# ...and the global caches other cleaners miss:"
+Enter
+Type "HOME=/tmp/demo-home chaff scan --caches /tmp/demo-empty"
+Enter
+Sleep 4s
+
 # --- interactive clean: pick a couple, reclaim to trash ---
-Type "chaff clean /tmp/chaff_demo"
+Type "chaff clean /tmp/demo-projects"
 Enter
 Sleep 1500ms
+Down
+Sleep 700ms
 Space
 Sleep 700ms
-Down
-Sleep 500ms
 Down
 Sleep 500ms
 Space
