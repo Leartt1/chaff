@@ -1,6 +1,6 @@
 [package]
 name = "chaff"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 rust-version = "1.74"
 description = "Safe, smart dev-disk reclaimer — winnow build & dependency junk from your projects"
@@ -18,6 +18,9 @@ walkdir = "2"           # recursive directory walk (size + discovery)
 rayon = "1"             # parallel directory size calculation
 trash = "5"             # safe delete (send to OS trash, recoverable)
 humansize = "2"         # human-readable byte sizes
+serde = { version = "1", features = ["derive"] }   # config parsing
+toml = "0.8"            # config.toml
+globset = "0.4"         # .chaffignore glob matching
 ratatui = "0.29"        # interactive TUI
 crossterm = "0.28"      # terminal backend for ratatui
 

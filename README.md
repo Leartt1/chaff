@@ -2,7 +2,7 @@
 
 Safe, smart dev-disk reclaimer — winnow the chaff from your projects.
 
-> Status: v0.3
+> Status: v0.4
 
 [![CI](https://github.com/Leartt1/chaff/actions/workflows/ci.yml/badge.svg)](https://github.com/Leartt1/chaff/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/chaff.svg)](https://crates.io/crates/chaff) [![downloads](https://img.shields.io/crates/d/chaff.svg)](https://crates.io/crates/chaff)
 
@@ -23,6 +23,7 @@ The one rule: **never remove anything you can't get back.**
 - Only touches known **regenerable** artifacts; never your source.
 - Never deletes **git-tracked** files — only true throwaway artifacts (`--force` to override).
 - **Dry-run by default** — `chaff clean` previews; nothing goes until you add `--apply`.
+- **Protect anything** with a `.chaffignore` (glob patterns) or a config file.
 
 ## Smart
 
@@ -43,15 +44,40 @@ chaff clean --older-than 30d --type node   # targeted
 chaff clean --all --apply  # reclaim everything safe, for real (to trash)
 ```
 
+## Configuration
+
+Set defaults in `~/.config/chaff/config.toml` (or point `$CHAFF_CONFIG` at a file):
+
+```toml
+older_than = "30d"        # default age filter for `clean`
+caches = true             # include global caches by default
+ignore = ["**/vendor/**"] # always-protected globs
+```
+
+Protect paths with a `.chaffignore` — in any scanned root, or globally at
+`~/.config/chaff/.chaffignore`. Glob patterns; a bare name protects any
+directory with that name:
+
+```
+keepme            # protects every keepme/ dir and its contents
+build/            # trailing slash works (gitignore-style)
+app/dist          # sub-paths match at any depth
+**/fixtures/**    # explicit globs work too
+```
+
+CLI flags always override config (e.g. `--no-caches` turns off the config's
+`caches` for a single run). An invalid ignore pattern is reported, never
+silently dropped.
+
 ## Roadmap
 
-- Config file + per-project ignore rules
 - Scheduled / automatic reclaim
+- Custom artifact rules via config
 
 ## Install
 
 ```sh
-cargo install chaff        # on first release
+cargo install chaff
 ```
 
 ## Alternatives

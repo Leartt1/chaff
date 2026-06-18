@@ -1,5 +1,6 @@
 use crate::model::Reclaimable;
-use crate::{caches, gitinfo, report, scan, tui};
+use crate::{caches, config, gitinfo, report, scan, tui};
+use globset::GlobSet;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -49,18 +50,20 @@ pub fn eligible(item: &Reclaimable, opts: &CleanOptions) -> Result<(), Skip> {
     Ok(())
 }
 
-/// Scan the roots, plus global caches if requested, sorted largest-first.
-fn collect(roots: &[PathBuf], include_caches: bool) -> Vec<Reclaimable> {
+/// Scan the roots (+ caches if requested), drop `.chaffignore` matches, and sort
+/// largest-first. Returns the items and how many were protected by ignore rules.
+fn collect(roots: &[PathBuf], include_caches: bool, ignore: &GlobSet) -> (Vec<Reclaimable>, usize) {
     let mut items = scan::scan(roots);
     if include_caches {
         items.extend(caches::scan_caches());
     }
+    let before = items.len();
+    items.retain(|i| !config::is_ignored(ignore, &i.path));
+    let ignored = before - items.len();
     items.sort_by_key(|i| std::cmp::Reverse(i.size));
-    items
+    (items, ignored)
 }
 
-/// Apply the configured filters, returning kept items and the count protected
-/// for containing git-tracked files.
 fn filter(items: Vec<Reclaimable>, opts: &CleanOptions) -> (Vec<Reclaimable>, u32) {
     let mut chosen = Vec::new();
     let mut tracked = 0u32;
@@ -89,29 +92,28 @@ fn delete_all(items: &[Reclaimable]) -> (u64, u32) {
     (reclaimed, count)
 }
 
-fn report_nothing(tracked: u32) {
-    let note = if tracked > 0 {
-        format!(" ({tracked} protected: git-tracked)")
-    } else {
-        String::new()
-    };
-    println!("Nothing to clean.{note}");
+fn print_protected(tracked: u32, ignored: usize) {
+    if tracked > 0 {
+        println!("Protected {tracked} item(s) with git-tracked files (use --force to include).");
+    }
+    if ignored > 0 {
+        println!("Protected {ignored} path(s) via .chaffignore/config.");
+    }
 }
 
 /// Non-interactive scan, filter, preview, and (with `--apply`) reclaim.
-pub fn run(roots: &[PathBuf], opts: &CleanOptions) -> anyhow::Result<()> {
-    let items = collect(roots, opts.include_caches);
+pub fn run(roots: &[PathBuf], opts: &CleanOptions, ignore: &GlobSet) -> anyhow::Result<()> {
+    let (items, ignored) = collect(roots, opts.include_caches, ignore);
     let (chosen, tracked) = filter(items, opts);
 
     if chosen.is_empty() {
-        report_nothing(tracked);
+        println!("Nothing to clean.");
+        print_protected(tracked, ignored);
         return Ok(());
     }
 
     report::print_table(&chosen);
-    if tracked > 0 {
-        println!("Protected {tracked} item(s) with git-tracked files (use --force to include).");
-    }
+    print_protected(tracked, ignored);
 
     if !opts.apply {
         println!("\nDry run — nothing deleted. Re-run with --apply to send these to the trash.");
@@ -135,10 +137,16 @@ pub fn run(roots: &[PathBuf], opts: &CleanOptions) -> anyhow::Result<()> {
 }
 
 /// Interactive picker: scan, apply safety, let the user choose, then reclaim.
-pub fn run_interactive(roots: &[PathBuf], force: bool, include_caches: bool) -> anyhow::Result<()> {
-    let items = collect(roots, include_caches);
+pub fn run_interactive(
+    roots: &[PathBuf],
+    force: bool,
+    include_caches: bool,
+    ignore: &GlobSet,
+    older_than: Option<Duration>,
+) -> anyhow::Result<()> {
+    let (items, ignored) = collect(roots, include_caches, ignore);
     let opts = CleanOptions {
-        older_than: None,
+        older_than,
         types: vec![],
         all: true,
         apply: true,
@@ -148,7 +156,8 @@ pub fn run_interactive(roots: &[PathBuf], force: bool, include_caches: bool) -> 
     let (chosen, tracked) = filter(items, &opts);
 
     if chosen.is_empty() {
-        report_nothing(tracked);
+        println!("Nothing to clean.");
+        print_protected(tracked, ignored);
         return Ok(());
     }
 
