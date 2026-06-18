@@ -2,7 +2,7 @@
 
 Safe, smart dev-disk reclaimer — winnow the chaff from your projects.
 
-> Status: v0.4
+> Status: v0.5
 
 [![CI](https://github.com/Leartt1/chaff/actions/workflows/ci.yml/badge.svg)](https://github.com/Leartt1/chaff/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/chaff.svg)](https://crates.io/crates/chaff) [![downloads](https://img.shields.io/crates/d/chaff.svg)](https://crates.io/crates/chaff)
 
@@ -38,6 +38,7 @@ The one rule: **never remove anything you can't get back.**
 chaff scan                 # show reclaimable space, biggest first
 chaff scan ~/code ~/work   # scan specific roots
 chaff scan --caches        # include global package-manager caches
+chaff scan --json | jq     # machine-readable output for scripts/CI
 
 chaff clean                # interactive picker — choose what to reclaim
 chaff clean --older-than 30d --type node   # targeted

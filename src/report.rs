@@ -70,3 +70,69 @@ fn age(modified: Option<SystemTime>) -> String {
         "new".to_string()
     }
 }
+
+#[derive(serde::Serialize)]
+struct JsonItem<'a> {
+    path: String,
+    kind: &'a str,
+    ecosystem: &'a str,
+    size_bytes: u64,
+    age_seconds: Option<u64>,
+}
+
+#[derive(serde::Serialize)]
+struct JsonReport<'a> {
+    total_bytes: u64,
+    count: usize,
+    items: Vec<JsonItem<'a>>,
+}
+
+/// Serialize reclaimables to pretty JSON for scripting (`scan --json`).
+pub fn to_json(items: &[Reclaimable]) -> String {
+    let report = JsonReport {
+        total_bytes: items.iter().map(|i| i.size).sum(),
+        count: items.len(),
+        items: items
+            .iter()
+            .map(|i| JsonItem {
+                path: i.path.display().to_string(),
+                kind: i.label,
+                ecosystem: i.ecosystem,
+                size_bytes: i.size,
+                age_seconds: i
+                    .modified
+                    .and_then(|m| m.elapsed().ok())
+                    .map(|d| d.as_secs()),
+            })
+            .collect(),
+    };
+    serde_json::to_string_pretty(&report).unwrap_or_else(|_| "{}".to_string())
+}
+
+/// Print reclaimables as JSON to stdout.
+pub fn print_json(items: &[Reclaimable]) {
+    println!("{}", to_json(items));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn json_has_items_and_total() {
+        let items = vec![Reclaimable {
+            path: PathBuf::from("/a/node_modules"),
+            ecosystem: "node",
+            label: "node_modules",
+            size: 100,
+            modified: None,
+        }];
+        let v: serde_json::Value = serde_json::from_str(&to_json(&items)).unwrap();
+        assert_eq!(v["count"], 1);
+        assert_eq!(v["total_bytes"], 100);
+        assert_eq!(v["items"][0]["kind"], "node_modules");
+        assert_eq!(v["items"][0]["size_bytes"], 100);
+        assert_eq!(v["items"][0]["ecosystem"], "node");
+    }
+}

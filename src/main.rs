@@ -34,6 +34,9 @@ enum Command {
         /// Exclude global caches even if enabled in config.
         #[arg(long)]
         no_caches: bool,
+        /// Output machine-readable JSON instead of a table.
+        #[arg(long)]
+        json: bool,
     },
     /// Reclaim space — interactive picker by default; flags for scripting.
     Clean {
@@ -82,11 +85,14 @@ fn main() -> anyhow::Result<()> {
             paths,
             caches,
             no_caches,
+            json,
         } => {
             let roots = roots_or_cwd(paths)?;
             let settings = config::load(&roots);
             let caches_eff = effective_caches(caches, no_caches, settings.caches);
-            note_config_caches(caches, no_caches, settings.caches);
+            if !json {
+                note_config_caches(caches, no_caches, settings.caches);
+            }
 
             let mut items = scan::scan(&roots);
             if caches_eff {
@@ -97,9 +103,13 @@ fn main() -> anyhow::Result<()> {
             let ignored = before - items.len();
             items.sort_by_key(|i| std::cmp::Reverse(i.size));
 
-            report::print_table(&items);
-            if ignored > 0 {
-                println!("Protected {ignored} path(s) via .chaffignore/config.");
+            if json {
+                report::print_json(&items);
+            } else {
+                report::print_table(&items);
+                if ignored > 0 {
+                    println!("Protected {ignored} path(s) via .chaffignore/config.");
+                }
             }
         }
         Command::Clean {
