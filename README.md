@@ -41,7 +41,7 @@ chaff scan --caches        # include global package-manager caches
 chaff scan --json | jq     # machine-readable output for scripts/CI
 chaff scan --min-size 100M # only items at least 100 MB
 
-chaff clean                # interactive picker — choose what to reclaim
+chaff clean                # interactive picker (↑/↓ · space · a all · / search · s sort · enter)
 chaff clean --older-than 30d --type node   # targeted
 chaff clean --all --apply  # reclaim everything safe, for real (to trash)
 chaff clean --json         # JSON of what clean would reclaim (never deletes)
