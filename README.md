@@ -39,6 +39,7 @@ chaff scan                 # show reclaimable space, biggest first
 chaff scan ~/code ~/work   # scan specific roots
 chaff scan --caches        # include global package-manager caches
 chaff scan --json | jq     # machine-readable output for scripts/CI
+chaff scan --min-size 100M # only items at least 100 MB
 
 chaff clean                # interactive picker — choose what to reclaim
 chaff clean --older-than 30d --type node   # targeted
