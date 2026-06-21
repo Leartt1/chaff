@@ -148,6 +148,43 @@ pub const RULES: &[Rule] = &[
         requires_marker: &[],
         requires_marker_ext: &[".csproj", ".fsproj", ".vbproj", ".sln"],
     },
+    // tool caches (unambiguous names — safe without a marker)
+    Rule {
+        dir: ".pytest_cache",
+        ecosystem: "python",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".mypy_cache",
+        ecosystem: "python",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".ruff_cache",
+        ecosystem: "python",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".tox",
+        ecosystem: "python",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".turbo",
+        ecosystem: "turbo",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".parcel-cache",
+        ecosystem: "parcel",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
 ];
 
 /// Return the matching rule for a directory `name`, given the set of sibling
@@ -221,5 +258,19 @@ mod tests {
     fn elixir_deps_requires_mix_exs() {
         assert!(match_dir("deps", &set(&["mix.exs"])).is_some());
         assert!(match_dir("deps", &set(&[])).is_none());
+    }
+
+    #[test]
+    fn tool_caches_match_without_marker() {
+        for d in [
+            ".pytest_cache",
+            ".mypy_cache",
+            ".ruff_cache",
+            ".tox",
+            ".turbo",
+            ".parcel-cache",
+        ] {
+            assert!(match_dir(d, &set(&[])).is_some(), "{d} should match");
+        }
     }
 }
