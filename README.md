@@ -44,6 +44,7 @@ chaff scan --min-size 100M # only items at least 100 MB
 chaff clean                # interactive picker — choose what to reclaim
 chaff clean --older-than 30d --type node   # targeted
 chaff clean --all --apply  # reclaim everything safe, for real (to trash)
+chaff clean --json         # JSON of what clean would reclaim (never deletes)
 
 chaff completions zsh      # shell completions (bash/zsh/fish/elvish/powershell)
 ```
