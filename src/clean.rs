@@ -12,12 +12,14 @@ pub struct CleanOptions {
     pub apply: bool,
     pub force: bool,
     pub include_caches: bool,
+    pub min_size: u64,
 }
 
 /// Why an item was excluded from cleaning.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Skip {
     TooNew,
+    TooSmall,
     WrongType,
     Tracked,
 }
@@ -31,6 +33,10 @@ pub fn eligible(item: &Reclaimable, opts: &CleanOptions) -> Result<(), Skip> {
             .any(|t| t == item.ecosystem || t == item.label)
     {
         return Err(Skip::WrongType);
+    }
+
+    if item.size < opts.min_size {
+        return Err(Skip::TooSmall);
     }
 
     if let Some(max_age) = opts.older_than {
@@ -143,6 +149,7 @@ pub fn run_interactive(
     include_caches: bool,
     ignore: &GlobSet,
     older_than: Option<Duration>,
+    min_size: u64,
 ) -> anyhow::Result<()> {
     let (items, ignored) = collect(roots, include_caches, ignore);
     let opts = CleanOptions {
@@ -152,6 +159,7 @@ pub fn run_interactive(
         apply: true,
         force,
         include_caches,
+        min_size,
     };
     let (chosen, tracked) = filter(items, &opts);
 
@@ -200,6 +208,7 @@ mod tests {
             apply: false,
             force: true, // skip the git check in unit tests
             include_caches: false,
+            min_size: 0,
         }
     }
 
@@ -233,5 +242,16 @@ mod tests {
         assert_eq!(eligible(&it, &o), Ok(()));
         o.types = vec!["node".to_string()];
         assert_eq!(eligible(&it, &o), Err(Skip::WrongType));
+    }
+
+    #[test]
+    fn min_size_excludes_small() {
+        let mut it = item("node", "node_modules", 1);
+        it.size = 50;
+        let mut o = opts();
+        o.min_size = 100;
+        assert_eq!(eligible(&it, &o), Err(Skip::TooSmall));
+        o.min_size = 10;
+        assert_eq!(eligible(&it, &o), Ok(()));
     }
 }

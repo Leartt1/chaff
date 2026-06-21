@@ -38,6 +38,9 @@ enum Command {
         /// Output machine-readable JSON instead of a table.
         #[arg(long)]
         json: bool,
+        /// Only show items at least this big (e.g. 100M, 1.5G).
+        #[arg(long)]
+        min_size: Option<String>,
     },
     /// Reclaim space — interactive picker by default; flags for scripting.
     Clean {
@@ -64,6 +67,9 @@ enum Command {
         /// Exclude global caches even if enabled in config.
         #[arg(long)]
         no_caches: bool,
+        /// Only consider items at least this big (e.g. 100M, 1.5G).
+        #[arg(long)]
+        min_size: Option<String>,
     },
     /// Print a shell completion script (bash, zsh, fish, …).
     Completions {
@@ -84,6 +90,15 @@ fn note_config_caches(cli_caches: bool, no_caches: bool, config_caches: bool) {
     }
 }
 
+/// Parse an optional `--min-size` value into bytes (absent = no minimum).
+fn parse_min_size(s: Option<&str>) -> anyhow::Result<u64> {
+    match s {
+        Some(s) => util::parse_size(s)
+            .ok_or_else(|| anyhow::anyhow!("bad --min-size '{s}' (try 100M, 1.5G)")),
+        None => Ok(0),
+    }
+}
+
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
@@ -92,10 +107,12 @@ fn main() -> anyhow::Result<()> {
             caches,
             no_caches,
             json,
+            min_size,
         } => {
             let roots = roots_or_cwd(paths)?;
             let settings = config::load(&roots);
             let caches_eff = effective_caches(caches, no_caches, settings.caches);
+            let min_size = parse_min_size(min_size.as_deref())?;
             if !json {
                 note_config_caches(caches, no_caches, settings.caches);
             }
@@ -107,6 +124,7 @@ fn main() -> anyhow::Result<()> {
             let before = items.len();
             items.retain(|i| !config::is_ignored(&settings.ignore, &i.path));
             let ignored = before - items.len();
+            items.retain(|i| i.size >= min_size);
             items.sort_by_key(|i| std::cmp::Reverse(i.size));
 
             if json {
@@ -127,11 +145,13 @@ fn main() -> anyhow::Result<()> {
             force,
             caches,
             no_caches,
+            min_size,
         } => {
             let roots = roots_or_cwd(paths)?;
             let settings = config::load(&roots);
             let caches_eff = effective_caches(caches, no_caches, settings.caches);
             note_config_caches(caches, no_caches, settings.caches);
+            let min_size = parse_min_size(min_size.as_deref())?;
 
             let no_filters = !all && types.is_empty() && older_than.is_none();
 
@@ -146,7 +166,14 @@ fn main() -> anyhow::Result<()> {
 
             // Bare `chaff clean` in a terminal opens the interactive picker.
             if no_filters && !apply && std::io::stdout().is_terminal() {
-                clean::run_interactive(&roots, force, caches_eff, &settings.ignore, older_eff)?;
+                clean::run_interactive(
+                    &roots,
+                    force,
+                    caches_eff,
+                    &settings.ignore,
+                    older_eff,
+                    min_size,
+                )?;
             } else {
                 let opts = clean::CleanOptions {
                     older_than: older_eff,
@@ -155,6 +182,7 @@ fn main() -> anyhow::Result<()> {
                     apply,
                     force,
                     include_caches: caches_eff,
+                    min_size,
                 };
                 clean::run(&roots, &opts, &settings.ignore)?;
             }
@@ -183,5 +211,12 @@ mod tests {
     #[test]
     fn cli_definition_is_valid() {
         Cli::command().debug_assert();
+    }
+
+    #[test]
+    fn min_size_parsing() {
+        assert_eq!(parse_min_size(None).unwrap(), 0);
+        assert_eq!(parse_min_size(Some("100M")).unwrap(), 100_000_000);
+        assert!(parse_min_size(Some("bogus")).is_err());
     }
 }
