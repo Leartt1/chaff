@@ -185,6 +185,14 @@ pub fn run_interactive(
     Ok(())
 }
 
+/// Like `run`, but emits the eligible set as JSON and never deletes.
+pub fn run_json(roots: &[PathBuf], opts: &CleanOptions, ignore: &GlobSet) -> anyhow::Result<()> {
+    let (items, _ignored) = collect(roots, opts.include_caches, ignore);
+    let (chosen, _tracked) = filter(items, opts);
+    report::print_json(&chosen);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

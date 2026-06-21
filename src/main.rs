@@ -70,6 +70,9 @@ enum Command {
         /// Only consider items at least this big (e.g. 100M, 1.5G).
         #[arg(long)]
         min_size: Option<String>,
+        /// Output the would-be-reclaimed set as JSON (never deletes).
+        #[arg(long)]
+        json: bool,
     },
     /// Print a shell completion script (bash, zsh, fish, …).
     Completions {
@@ -146,11 +149,14 @@ fn main() -> anyhow::Result<()> {
             caches,
             no_caches,
             min_size,
+            json,
         } => {
             let roots = roots_or_cwd(paths)?;
             let settings = config::load(&roots);
             let caches_eff = effective_caches(caches, no_caches, settings.caches);
-            note_config_caches(caches, no_caches, settings.caches);
+            if !json {
+                note_config_caches(caches, no_caches, settings.caches);
+            }
             let min_size = parse_min_size(min_size.as_deref())?;
 
             let no_filters = !all && types.is_empty() && older_than.is_none();
@@ -164,8 +170,21 @@ fn main() -> anyhow::Result<()> {
                     None => None,
                 };
 
-            // Bare `chaff clean` in a terminal opens the interactive picker.
-            if no_filters && !apply && std::io::stdout().is_terminal() {
+            let opts = clean::CleanOptions {
+                older_than: older_eff,
+                types,
+                all,
+                apply,
+                force,
+                include_caches: caches_eff,
+                min_size,
+            };
+
+            if json {
+                // Machine-readable preview; never deletes.
+                clean::run_json(&roots, &opts, &settings.ignore)?;
+            } else if no_filters && !apply && std::io::stdout().is_terminal() {
+                // Bare `chaff clean` in a terminal opens the interactive picker.
                 clean::run_interactive(
                     &roots,
                     force,
@@ -175,15 +194,6 @@ fn main() -> anyhow::Result<()> {
                     min_size,
                 )?;
             } else {
-                let opts = clean::CleanOptions {
-                    older_than: older_eff,
-                    types,
-                    all,
-                    apply,
-                    force,
-                    include_caches: caches_eff,
-                    min_size,
-                };
                 clean::run(&roots, &opts, &settings.ignore)?;
             }
         }
