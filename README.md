@@ -40,6 +40,7 @@ chaff scan ~/code ~/work   # scan specific roots
 chaff scan --caches        # include global package-manager caches
 chaff scan --json | jq     # machine-readable output for scripts/CI
 chaff scan --min-size 100M # only items at least 100 MB
+chaff scan --top 10        # only the 10 largest (total still counts everything)
 
 chaff clean                # interactive picker (↑/↓ · space · a all · / search · s sort · enter)
 chaff clean --older-than 30d --type node   # targeted
