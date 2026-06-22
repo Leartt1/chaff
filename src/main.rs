@@ -41,6 +41,9 @@ enum Command {
         /// Only show items at least this big (e.g. 100M, 1.5G).
         #[arg(long)]
         min_size: Option<String>,
+        /// Show only the N largest items (total still reflects everything).
+        #[arg(long)]
+        top: Option<usize>,
     },
     /// Reclaim space — interactive picker by default; flags for scripting.
     Clean {
@@ -114,6 +117,7 @@ fn main() -> anyhow::Result<()> {
             no_caches,
             json,
             min_size,
+            top,
         } => {
             let roots = roots_or_cwd(paths)?;
             let settings = config::load(&roots);
@@ -136,7 +140,7 @@ fn main() -> anyhow::Result<()> {
             if json {
                 report::print_json(&items);
             } else {
-                report::print_table(&items);
+                report::print_table(&items, top);
                 if ignored > 0 {
                     println!("Protected {ignored} path(s) via .chaffignore/config.");
                 }

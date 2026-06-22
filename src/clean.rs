@@ -137,7 +137,7 @@ pub fn run(roots: &[PathBuf], opts: &CleanOptions, ignore: &GlobSet) -> anyhow::
         return Ok(());
     }
 
-    report::print_table(&chosen);
+    report::print_table(&chosen, None);
     print_protected(tracked, ignored);
 
     if !opts.apply {

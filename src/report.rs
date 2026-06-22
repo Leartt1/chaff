@@ -9,15 +9,17 @@ pub fn human(bytes: u64) -> String {
 }
 
 /// Print a size-sorted table of reclaimable artifacts, a total, and a
-/// per-ecosystem breakdown.
-pub fn print_table(items: &[Reclaimable]) {
+/// per-ecosystem breakdown. `limit` caps the rows shown; the total still
+/// reflects every item.
+pub fn print_table(items: &[Reclaimable], limit: Option<usize>) {
     if items.is_empty() {
         println!("Nothing reclaimable found. Your projects are already tidy. 🌾");
         return;
     }
 
+    let shown = visible_count(items.len(), limit);
     println!("{:>11}  {:>6}  {:<13} PATH", "SIZE", "AGE", "TYPE");
-    for i in items {
+    for i in &items[..shown] {
         println!(
             "{:>11}  {:>6}  {:<13} {}",
             format_size(i.size, DECIMAL),
@@ -38,12 +40,23 @@ pub fn print_table(items: &[Reclaimable]) {
         .collect::<Vec<_>>()
         .join(", ");
 
+    let more = if shown < items.len() {
+        format!("  (showing top {shown})")
+    } else {
+        String::new()
+    };
     println!(
-        "\nReclaimable: {} across {} item(s)  ({})",
+        "\nReclaimable: {} across {} item(s)  ({}){}",
         format_size(total, DECIMAL),
         items.len(),
-        breakdown
+        breakdown,
+        more
     );
+}
+
+/// How many rows to display given an optional cap.
+fn visible_count(total: usize, limit: Option<usize>) -> usize {
+    limit.map_or(total, |n| n.min(total))
 }
 
 /// Compact human age (e.g. "3d", "2w", "5mo") from a last-modified time.
@@ -134,5 +147,12 @@ mod tests {
         assert_eq!(v["items"][0]["kind"], "node_modules");
         assert_eq!(v["items"][0]["size_bytes"], 100);
         assert_eq!(v["items"][0]["ecosystem"], "node");
+    }
+
+    #[test]
+    fn visible_count_caps() {
+        assert_eq!(visible_count(10, None), 10);
+        assert_eq!(visible_count(10, Some(3)), 3);
+        assert_eq!(visible_count(2, Some(5)), 2);
     }
 }
