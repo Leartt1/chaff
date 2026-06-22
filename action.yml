@@ -1,0 +1,92 @@
+name: "chaff — reclaim disk space"
+description: "Free disk space on a runner by reclaiming build artifacts and package caches with chaff."
+branding:
+  icon: "wind"
+  color: "green"
+
+inputs:
+  paths:
+    description: "Space-separated roots to scan."
+    default: "."
+  caches:
+    description: "Also reclaim global package-manager caches (true/false)."
+    default: "false"
+  types:
+    description: "Comma-separated ecosystems/types to limit to (e.g. node,rust)."
+    default: ""
+  older_than:
+    description: "Only items untouched for at least this long (e.g. 30d)."
+    default: ""
+  min_size:
+    description: "Only items at least this big (e.g. 100M)."
+    default: ""
+  force:
+    description: "Include items containing git-tracked files (true/false)."
+    default: "false"
+  dry_run:
+    description: "Preview only; do not delete (true/false)."
+    default: "false"
+  version:
+    description: "chaff release tag to install (default: latest)."
+    default: "latest"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install chaff
+      shell: bash
+      env:
+        CHAFF_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        case "$(uname -s)-$(uname -m)" in
+          Linux-x86_64) target=x86_64-unknown-linux-gnu ;;
+          Darwin-arm64) target=aarch64-apple-darwin ;;
+          Darwin-x86_64) target=x86_64-apple-darwin ;;
+          *) echo "chaff-action: unsupported runner $(uname -s)-$(uname -m)" >&2; exit 1 ;;
+        esac
+        if [ "$CHAFF_VERSION" = "latest" ]; then
+          url="https://github.com/Leartt1/chaff/releases/latest/download/chaff-${target}.tar.gz"
+        else
+          url="https://github.com/Leartt1/chaff/releases/download/${CHAFF_VERSION}/chaff-${target}.tar.gz"
+        fi
+        mkdir -p "$HOME/.chaff-bin"
+        if curl -fsSL "$url" -o /tmp/chaff.tar.gz; then
+          tar -C "$HOME/.chaff-bin" -xzf /tmp/chaff.tar.gz
+        elif command -v cargo >/dev/null 2>&1; then
+          echo "chaff-action: prebuilt download failed, building with cargo" >&2
+          cargo install chaff --locked --root "$HOME/.chaff-cargo"
+          cp "$HOME/.chaff-cargo/bin/chaff" "$HOME/.chaff-bin/chaff"
+        else
+          echo "chaff-action: no prebuilt binary and no cargo available" >&2
+          exit 1
+        fi
+        echo "$HOME/.chaff-bin" >> "$GITHUB_PATH"
+        "$HOME/.chaff-bin/chaff" --version
+
+    - name: Reclaim
+      shell: bash
+      env:
+        CHAFF_PATHS: ${{ inputs.paths }}
+        CHAFF_CACHES: ${{ inputs.caches }}
+        CHAFF_TYPES: ${{ inputs.types }}
+        CHAFF_OLDER_THAN: ${{ inputs.older_than }}
+        CHAFF_MIN_SIZE: ${{ inputs.min_size }}
+        CHAFF_FORCE: ${{ inputs.force }}
+        CHAFF_DRY_RUN: ${{ inputs.dry_run }}
+      run: |
+        set -euo pipefail
+        # Paths are intentionally word-split into separate roots.
+        # shellcheck disable=SC2206
+        args=(clean $CHAFF_PATHS)
+        [ "$CHAFF_CACHES" = "true" ] && args+=(--caches)
+        [ -n "$CHAFF_TYPES" ] && args+=(--type "$CHAFF_TYPES")
+        [ -n "$CHAFF_OLDER_THAN" ] && args+=(--older-than "$CHAFF_OLDER_THAN")
+        [ -n "$CHAFF_MIN_SIZE" ] && args+=(--min-size "$CHAFF_MIN_SIZE")
+        [ "$CHAFF_FORCE" = "true" ] && args+=(--force)
+        if [ "$CHAFF_DRY_RUN" != "true" ]; then
+          # On CI, trash doesn't free space — purge permanently.
+          args+=(--all --apply --purge)
+        fi
+        echo "+ chaff ${args[*]}"
+        chaff "${args[@]}"
