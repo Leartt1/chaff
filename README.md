@@ -86,7 +86,7 @@ Free disk on a CI runner — fixes "no space left on device", and stops self-hos
 runners filling up between jobs:
 
 ```yaml
-- uses: Leartt1/chaff@v0.6.0
+- uses: Leartt1/chaff@v0.6.1
   with:
     caches: true        # also clear package-manager caches
     # paths: .          # roots to scan (default: .)
