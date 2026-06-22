@@ -13,6 +13,9 @@ pub struct CleanOptions {
     pub force: bool,
     pub include_caches: bool,
     pub min_size: u64,
+    /// Permanently delete instead of moving to the trash (frees space immediately;
+    /// not recoverable). Trash is the default.
+    pub purge: bool,
 }
 
 /// Why an item was excluded from cleaning.
@@ -83,11 +86,17 @@ fn filter(items: Vec<Reclaimable>, opts: &CleanOptions) -> (Vec<Reclaimable>, u3
     (chosen, tracked)
 }
 
-fn delete_all(items: &[Reclaimable]) -> (u64, u32) {
+/// Remove the chosen items, either to the trash (default) or permanently (`purge`).
+fn delete_all(items: &[Reclaimable], purge: bool) -> (u64, u32) {
     let mut reclaimed = 0u64;
     let mut count = 0u32;
     for it in items {
-        match trash::delete(&it.path) {
+        let result = if purge {
+            std::fs::remove_dir_all(&it.path).map_err(anyhow::Error::from)
+        } else {
+            trash::delete(&it.path).map_err(anyhow::Error::from)
+        };
+        match result {
             Ok(()) => {
                 reclaimed += it.size;
                 count += 1;
@@ -96,6 +105,16 @@ fn delete_all(items: &[Reclaimable]) -> (u64, u32) {
         }
     }
     (reclaimed, count)
+}
+
+fn report_reclaimed(reclaimed: u64, count: u32, purge: bool) {
+    let how = if purge { "deleted" } else { "→ trash" };
+    println!(
+        "\nReclaimed {} from {} item(s) ({}).",
+        report::human(reclaimed),
+        count,
+        how
+    );
 }
 
 fn print_protected(tracked: u32, ignored: usize) {
@@ -122,7 +141,12 @@ pub fn run(roots: &[PathBuf], opts: &CleanOptions, ignore: &GlobSet) -> anyhow::
     print_protected(tracked, ignored);
 
     if !opts.apply {
-        println!("\nDry run — nothing deleted. Re-run with --apply to send these to the trash.");
+        let how = if opts.purge {
+            "delete them permanently"
+        } else {
+            "send these to the trash"
+        };
+        println!("\nDry run — nothing deleted. Re-run with --apply to {how}.");
         return Ok(());
     }
 
@@ -133,12 +157,8 @@ pub fn run(roots: &[PathBuf], opts: &CleanOptions, ignore: &GlobSet) -> anyhow::
         );
     }
 
-    let (reclaimed, count) = delete_all(&chosen);
-    println!(
-        "\nReclaimed {} from {} item(s) → trash.",
-        report::human(reclaimed),
-        count
-    );
+    let (reclaimed, count) = delete_all(&chosen, opts.purge);
+    report_reclaimed(reclaimed, count, opts.purge);
     Ok(())
 }
 
@@ -160,6 +180,7 @@ pub fn run_interactive(
         force,
         include_caches,
         min_size,
+        purge: false,
     };
     let (chosen, tracked) = filter(items, &opts);
 
@@ -176,12 +197,8 @@ pub fn run_interactive(
     }
 
     let selected: Vec<Reclaimable> = picks.into_iter().map(|i| chosen[i].clone()).collect();
-    let (reclaimed, count) = delete_all(&selected);
-    println!(
-        "Reclaimed {} from {} item(s) → trash.",
-        report::human(reclaimed),
-        count
-    );
+    let (reclaimed, count) = delete_all(&selected, opts.purge);
+    report_reclaimed(reclaimed, count, opts.purge);
     Ok(())
 }
 
@@ -217,6 +234,7 @@ mod tests {
             force: true, // skip the git check in unit tests
             include_caches: false,
             min_size: 0,
+            purge: false,
         }
     }
 

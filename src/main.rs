@@ -73,6 +73,9 @@ enum Command {
         /// Output the would-be-reclaimed set as JSON (never deletes).
         #[arg(long)]
         json: bool,
+        /// Permanently delete instead of trash (frees space now; not recoverable).
+        #[arg(long)]
+        purge: bool,
     },
     /// Print a shell completion script (bash, zsh, fish, …).
     Completions {
@@ -150,6 +153,7 @@ fn main() -> anyhow::Result<()> {
             no_caches,
             min_size,
             json,
+            purge,
         } => {
             let roots = roots_or_cwd(paths)?;
             let settings = config::load(&roots);
@@ -178,6 +182,7 @@ fn main() -> anyhow::Result<()> {
                 force,
                 include_caches: caches_eff,
                 min_size,
+                purge,
             };
 
             if json {
