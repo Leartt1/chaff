@@ -11,11 +11,14 @@ mkdir -p "$E"
 
 # --- fake projects ---
 mkdir -p "$P/web-app/node_modules" "$P/web-app/src" \
+         "$P/dashboard/node_modules" \
          "$P/api/target" "$P/ml/.venv" "$P/site/.next"
 echo '{}' > "$P/web-app/package.json"
+echo '{}' > "$P/dashboard/package.json"
 : > "$P/api/Cargo.toml"
 echo '{}' > "$P/site/package.json"
 mkfile -n 420m  "$P/web-app/node_modules/deps.bin"
+mkfile -n 540m  "$P/dashboard/node_modules/deps.bin"
 mkfile -n 1200m "$P/api/target/build.bin"
 mkfile -n 380m  "$P/ml/.venv/site-packages.bin"
 mkfile -n 210m  "$P/site/.next/cache.bin"

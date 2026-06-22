@@ -37,17 +37,21 @@ Type "HOME=/tmp/demo-home chaff scan --caches /tmp/demo-empty"
 Enter
 Sleep 4s
 
-# --- interactive clean: pick a couple, reclaim to trash ---
+# --- interactive clean: sort, filter, select-all, reclaim ---
 Type "chaff clean /tmp/demo-projects"
 Enter
-Sleep 1500ms
-Down
-Sleep 700ms
-Space
-Sleep 700ms
-Down
+Sleep 1800ms
+Type "s"
+Sleep 1300ms
+Type "s"
+Sleep 1300ms
+Type "/"
 Sleep 500ms
-Space
-Sleep 900ms
+Type "node"
+Sleep 1400ms
 Enter
-Sleep 3s
+Sleep 800ms
+Type "a"
+Sleep 1200ms
+Enter
+Sleep 2500ms
