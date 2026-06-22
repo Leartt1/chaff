@@ -7,6 +7,10 @@ All notable changes to chaff are documented here. Format follows
 ## [0.6.0] - 2026-06-22
 
 ### Added
+- **GitHub Action** (`uses: Leartt1/chaff@v0.6.0`) to reclaim disk on CI and
+  self-hosted runners, plus a release workflow that ships prebuilt binaries.
+- `--purge` to permanently delete instead of trashing (frees space immediately;
+  not recoverable). Trash remains the default.
 - Interactive picker upgrades: cycle sort with `s` (size / age / name), filter
   with `/`, and `a` now selects all *visible* items (filter, then select a type).
 - `clean --json` — machine-readable preview of what would be reclaimed (never deletes).

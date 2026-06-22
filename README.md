@@ -45,6 +45,7 @@ chaff clean                # interactive picker (↑/↓ · space · a all · / 
 chaff clean --older-than 30d --type node   # targeted
 chaff clean --all --apply  # reclaim everything safe, for real (to trash)
 chaff clean --json         # JSON of what clean would reclaim (never deletes)
+chaff clean --all --apply --purge   # permanently delete (frees space now; not recoverable)
 
 chaff completions zsh      # shell completions (bash/zsh/fish/elvish/powershell)
 ```
@@ -78,6 +79,25 @@ silently dropped.
 
 - Scheduled / automatic reclaim
 - Custom artifact rules via config
+
+## GitHub Action
+
+Free disk on a CI runner — fixes "no space left on device", and stops self-hosted
+runners filling up between jobs:
+
+```yaml
+- uses: Leartt1/chaff@v0.6.0
+  with:
+    caches: true        # also clear package-manager caches
+    # paths: .          # roots to scan (default: .)
+    # older_than: 30d
+    # min_size: 100M
+    # dry_run: true     # preview without deleting
+```
+
+On CI it **permanently** deletes (via `--purge`) so space is actually freed —
+git-tracked files are still never touched. Downloads a prebuilt binary
+(Linux/macOS runners), falling back to `cargo install`.
 
 ## Install
 
