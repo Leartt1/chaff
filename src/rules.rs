@@ -185,6 +185,37 @@ pub const RULES: &[Rule] = &[
         requires_marker: &[],
         requires_marker_ext: &[],
     },
+    Rule {
+        dir: ".angular",
+        ecosystem: "angular",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".astro",
+        ecosystem: "astro",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".docusaurus",
+        ecosystem: "docusaurus",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".nyc_output",
+        ecosystem: "coverage",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    // "coverage" is an ambiguous name — only treat it as reclaimable in a JS project.
+    Rule {
+        dir: "coverage",
+        ecosystem: "coverage",
+        requires_marker: &["package.json"],
+        requires_marker_ext: &[],
+    },
 ];
 
 /// Return the matching rule for a directory `name`, given the set of sibling
@@ -272,5 +303,15 @@ mod tests {
         ] {
             assert!(match_dir(d, &set(&[])).is_some(), "{d} should match");
         }
+    }
+
+    #[test]
+    fn more_build_caches_match() {
+        for d in [".angular", ".astro", ".docusaurus", ".nyc_output"] {
+            assert!(match_dir(d, &set(&[])).is_some(), "{d} should match");
+        }
+        // "coverage" needs a JS-project marker
+        assert!(match_dir("coverage", &set(&["package.json"])).is_some());
+        assert!(match_dir("coverage", &set(&[])).is_none());
     }
 }
