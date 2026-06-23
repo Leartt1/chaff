@@ -44,6 +44,9 @@ enum Command {
         /// Show only the N largest items (total still reflects everything).
         #[arg(long)]
         top: Option<usize>,
+        /// Sort order: size, age, or name.
+        #[arg(long, value_enum, default_value = "size")]
+        sort: SortKey,
     },
     /// Reclaim space — interactive picker by default; flags for scripting.
     Clean {
@@ -108,6 +111,27 @@ fn parse_min_size(s: Option<&str>) -> anyhow::Result<u64> {
     }
 }
 
+#[derive(clap::ValueEnum, Clone, Copy, Debug)]
+enum SortKey {
+    Size,
+    Age,
+    Name,
+}
+
+/// Sort reclaimables in place by the chosen key.
+fn sort_items(items: &mut [model::Reclaimable], key: SortKey) {
+    match key {
+        SortKey::Size => items.sort_by_key(|i| std::cmp::Reverse(i.size)),
+        SortKey::Name => items.sort_by(|a, b| a.path.cmp(&b.path)),
+        SortKey::Age => items.sort_by(|a, b| match (a.modified, b.modified) {
+            (Some(x), Some(y)) => x.cmp(&y),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => std::cmp::Ordering::Equal,
+        }),
+    }
+}
+
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
@@ -118,6 +142,7 @@ fn main() -> anyhow::Result<()> {
             json,
             min_size,
             top,
+            sort,
         } => {
             let roots = roots_or_cwd(paths)?;
             let settings = config::load(&roots);
@@ -135,7 +160,7 @@ fn main() -> anyhow::Result<()> {
             items.retain(|i| !config::is_ignored(&settings.ignore, &i.path));
             let ignored = before - items.len();
             items.retain(|i| i.size >= min_size);
-            items.sort_by_key(|i| std::cmp::Reverse(i.size));
+            sort_items(&mut items, sort);
 
             if json {
                 report::print_json(&items);
@@ -237,5 +262,24 @@ mod tests {
         assert_eq!(parse_min_size(None).unwrap(), 0);
         assert_eq!(parse_min_size(Some("100M")).unwrap(), 100_000_000);
         assert!(parse_min_size(Some("bogus")).is_err());
+    }
+
+    #[test]
+    fn sort_items_orders_by_key() {
+        use std::time::{Duration, SystemTime};
+        let mk = |size: u64, age_days: u64, path: &str| model::Reclaimable {
+            path: PathBuf::from(path),
+            ecosystem: "x",
+            label: "y",
+            size,
+            modified: Some(SystemTime::now() - Duration::from_secs(age_days * 86_400)),
+        };
+        let mut v = vec![mk(100, 1, "/b"), mk(300, 365, "/a"), mk(50, 30, "/c")];
+        sort_items(&mut v, SortKey::Size);
+        assert_eq!(v[0].size, 300);
+        sort_items(&mut v, SortKey::Name);
+        assert_eq!(v[0].path, PathBuf::from("/a"));
+        sort_items(&mut v, SortKey::Age);
+        assert_eq!(v[0].size, 300);
     }
 }
