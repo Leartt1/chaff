@@ -1,0 +1,49 @@
+name: test-action
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: self-test the action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create dummy reclaimable artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p sandbox/app/node_modules
+          echo '{}' > sandbox/app/package.json
+          head -c 5000000 /dev/zero > sandbox/app/node_modules/big.bin
+          test -d sandbox/app/node_modules
+
+      - name: chaff (dry run — must NOT delete)
+        uses: ./
+        with:
+          paths: sandbox
+          dry_run: "true"
+
+      - name: Assert dry run kept the artifacts
+        run: |
+          set -euo pipefail
+          test -d sandbox/app/node_modules
+          echo "dry run preserved node_modules ✅"
+
+      - name: chaff (apply — must delete)
+        uses: ./
+        with:
+          paths: sandbox
+
+      - name: Assert artifacts were reclaimed
+        run: |
+          set -euo pipefail
+          if [ -d sandbox/app/node_modules ]; then
+            echo "node_modules still present — action did not reclaim" >&2
+            exit 1
+          fi
+          echo "action reclaimed node_modules ✅"
