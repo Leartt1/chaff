@@ -29,7 +29,7 @@ The one rule: **never remove anything you can't get back.**
 
 - Sort and filter by **size**, **age**, and **type**.
 - One pass across all your projects, every ecosystem at once.
-- Covers node, rust, python, next, nuxt, svelte, gradle, dart, terraform, cocoapods, swift, elixir, haskell, zig, and .NET — plus tool caches (pytest, mypy, ruff, tox, turbo, parcel).
+- Covers node, rust, python, next, nuxt, svelte, gradle, dart, terraform, cocoapods, swift, elixir, haskell, zig, and .NET — plus tool caches (pytest, mypy, ruff, tox, turbo, parcel, angular, astro, docusaurus, nyc, coverage).
 - Optionally sweep global caches too (`--caches`): npm, pnpm, yarn, pip, uv, cargo, go, gradle, maven, Hugging Face, Xcode DerivedData, Homebrew, deno, composer.
 
 ## Usage
