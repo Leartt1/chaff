@@ -42,6 +42,7 @@ chaff scan --json | jq     # machine-readable output for scripts/CI
 chaff scan --min-size 100M # only items at least 100 MB
 chaff scan --top 10        # only the 10 largest (total still counts everything)
 chaff scan --sort age      # sort by age (oldest first); also: size, name
+chaff scan -q              # quiet: just the table, no extra notes
 
 chaff clean                # interactive picker (↑/↓ · space · a all · / search · s sort · enter)
 chaff clean --older-than 30d --type node   # targeted

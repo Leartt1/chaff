@@ -47,6 +47,9 @@ enum Command {
         /// Sort order: size, age, or name.
         #[arg(long, value_enum, default_value = "size")]
         sort: SortKey,
+        /// Suppress informational notes — print just the table.
+        #[arg(long, short = 'q')]
+        quiet: bool,
     },
     /// Reclaim space — interactive picker by default; flags for scripting.
     Clean {
@@ -143,12 +146,13 @@ fn main() -> anyhow::Result<()> {
             min_size,
             top,
             sort,
+            quiet,
         } => {
             let roots = roots_or_cwd(paths)?;
             let settings = config::load(&roots);
             let caches_eff = effective_caches(caches, no_caches, settings.caches);
             let min_size = parse_min_size(min_size.as_deref())?;
-            if !json {
+            if !json && !quiet {
                 note_config_caches(caches, no_caches, settings.caches);
             }
 
@@ -166,7 +170,7 @@ fn main() -> anyhow::Result<()> {
                 report::print_json(&items);
             } else {
                 report::print_table(&items, top);
-                if ignored > 0 {
+                if ignored > 0 && !quiet {
                     println!("Protected {ignored} path(s) via .chaffignore/config.");
                 }
             }
