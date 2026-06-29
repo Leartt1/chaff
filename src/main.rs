@@ -50,6 +50,9 @@ enum Command {
         /// Suppress informational notes — print just the table.
         #[arg(long, short = 'q')]
         quiet: bool,
+        /// Also print a per-ecosystem bar chart.
+        #[arg(long)]
+        chart: bool,
     },
     /// Reclaim space — interactive picker by default; flags for scripting.
     Clean {
@@ -147,6 +150,7 @@ fn main() -> anyhow::Result<()> {
             top,
             sort,
             quiet,
+            chart,
         } => {
             let roots = roots_or_cwd(paths)?;
             let settings = config::load(&roots);
@@ -172,6 +176,9 @@ fn main() -> anyhow::Result<()> {
                 report::print_table(&items, top);
                 if ignored > 0 && !quiet {
                     println!("Protected {ignored} path(s) via .chaffignore/config.");
+                }
+                if chart {
+                    report::print_chart(&items);
                 }
             }
         }

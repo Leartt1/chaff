@@ -59,6 +59,35 @@ fn visible_count(total: usize, limit: Option<usize>) -> usize {
     limit.map_or(total, |n| n.min(total))
 }
 
+/// Print a per-ecosystem horizontal bar chart, largest first.
+pub fn print_chart(items: &[Reclaimable]) {
+    if items.is_empty() {
+        return;
+    }
+    let mut by_eco: BTreeMap<&str, u64> = BTreeMap::new();
+    for i in items {
+        *by_eco.entry(i.ecosystem).or_default() += i.size;
+    }
+    let max = by_eco.values().copied().max().unwrap_or(0);
+    let mut rows: Vec<(&str, u64)> = by_eco.into_iter().collect();
+    rows.sort_by_key(|(_, sz)| std::cmp::Reverse(*sz));
+
+    const WIDTH: usize = 28;
+    println!();
+    for (eco, sz) in rows {
+        let bar = "█".repeat(bar_len(sz, max, WIDTH));
+        println!("{eco:<12} {bar:<WIDTH$} {}", human(sz));
+    }
+}
+
+/// Length of a bar (in cells) for `size` relative to `max`, capped at `width`.
+fn bar_len(size: u64, max: u64, width: usize) -> usize {
+    if max == 0 {
+        return 0;
+    }
+    ((size as f64 / max as f64) * width as f64).round() as usize
+}
+
 /// Compact human age (e.g. "3d", "2w", "5mo") from a last-modified time.
 fn age(modified: Option<SystemTime>) -> String {
     let Some(t) = modified else {
@@ -154,5 +183,13 @@ mod tests {
         assert_eq!(visible_count(10, None), 10);
         assert_eq!(visible_count(10, Some(3)), 3);
         assert_eq!(visible_count(2, Some(5)), 2);
+    }
+
+    #[test]
+    fn bar_len_scales() {
+        assert_eq!(bar_len(100, 100, 30), 30);
+        assert_eq!(bar_len(50, 100, 30), 15);
+        assert_eq!(bar_len(0, 100, 30), 0);
+        assert_eq!(bar_len(100, 0, 30), 0);
     }
 }
