@@ -29,7 +29,7 @@ The one rule: **never remove anything you can't get back.**
 
 - Sort and filter by **size**, **age**, and **type**.
 - One pass across all your projects, every ecosystem at once.
-- Covers node, rust, python, next, nuxt, svelte, gradle, dart, terraform, cocoapods, swift, elixir, haskell, zig, and .NET — plus tool caches (pytest, mypy, ruff, tox, turbo, parcel, angular, astro, docusaurus, nyc, coverage).
+- Covers node, rust, python, next, nuxt, svelte, gradle, dart, terraform, cocoapods, swift, elixir, haskell, zig, .NET, Go, PHP, Maven/Java, Elm, CMake, and Unreal — plus tool caches (pytest, mypy, ruff, tox, hypothesis, turbo, parcel, angular, astro, docusaurus, storybook, nyc, coverage, htmlcov, jupyter).
 - Optionally sweep global caches too (`--caches`): npm, pnpm, yarn, pip, uv, cargo, go, gradle, maven, Hugging Face, Xcode DerivedData, Homebrew, deno, composer.
 
 ## Usage
@@ -43,6 +43,7 @@ chaff scan --min-size 100M # only items at least 100 MB
 chaff scan --top 10        # only the 10 largest (total still counts everything)
 chaff scan --sort age      # sort by age (oldest first); also: size, name
 chaff scan -q              # quiet: just the table, no extra notes
+chaff scan --chart         # add a per-ecosystem bar chart
 
 chaff clean                # interactive picker (↑/↓ · space · a all · / search · s sort · enter)
 chaff clean --older-than 30d --type node   # targeted

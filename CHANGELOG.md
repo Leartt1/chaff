@@ -4,6 +4,17 @@ All notable changes to chaff are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/) (pre-1.0: minor = features, patch = fixes).
 
+## [Unreleased]
+
+### Added
+- Broadened artifact coverage: Elm (`elm-stuff`), Go and PHP `vendor` (gated by
+  `go.mod` / `composer.json`), Maven/Java `target` (gated by `pom.xml`),
+  CMake/CLion build dirs (`cmake-build-debug` / `cmake-build-release`), Storybook
+  (`storybook-static`), Unreal Engine (`Intermediate` / `DerivedDataCache`, gated
+  by `.uproject`), and Jupyter/Python caches (`.ipynb_checkpoints`,
+  `.hypothesis`, `htmlcov`). Ambiguous names stay marker-gated so nothing
+  unexpected is ever matched.
+
 ## [0.6.1] - 2026-06-22
 
 ### Added
