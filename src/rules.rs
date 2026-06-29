@@ -216,6 +216,82 @@ pub const RULES: &[Rule] = &[
         requires_marker: &["package.json"],
         requires_marker_ext: &[],
     },
+    // v0.7 — broadened coverage
+    Rule {
+        dir: "elm-stuff",
+        ecosystem: "elm",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".ipynb_checkpoints",
+        ecosystem: "jupyter",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".hypothesis",
+        ecosystem: "python",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: "htmlcov",
+        ecosystem: "coverage",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: "cmake-build-debug",
+        ecosystem: "cmake",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: "cmake-build-release",
+        ecosystem: "cmake",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: "storybook-static",
+        ecosystem: "storybook",
+        requires_marker: &["package.json"],
+        requires_marker_ext: &[],
+    },
+    // "vendor" is ambiguous — only reclaim it beside a Go or PHP project file.
+    Rule {
+        dir: "vendor",
+        ecosystem: "go",
+        requires_marker: &["go.mod"],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: "vendor",
+        ecosystem: "php",
+        requires_marker: &["composer.json"],
+        requires_marker_ext: &[],
+    },
+    // "target" is also Maven/Java's build dir — gate the extra match on pom.xml.
+    Rule {
+        dir: "target",
+        ecosystem: "maven",
+        requires_marker: &["pom.xml"],
+        requires_marker_ext: &[],
+    },
+    // Unreal Engine generated dirs — gated by a .uproject beside them.
+    Rule {
+        dir: "Intermediate",
+        ecosystem: "unreal",
+        requires_marker: &[],
+        requires_marker_ext: &[".uproject"],
+    },
+    Rule {
+        dir: "DerivedDataCache",
+        ecosystem: "unreal",
+        requires_marker: &[],
+        requires_marker_ext: &[".uproject"],
+    },
 ];
 
 /// Return the matching rule for a directory `name`, given the set of sibling
@@ -313,5 +389,52 @@ mod tests {
         // "coverage" needs a JS-project marker
         assert!(match_dir("coverage", &set(&["package.json"])).is_some());
         assert!(match_dir("coverage", &set(&[])).is_none());
+    }
+
+    #[test]
+    fn unambiguous_v07_caches_match_without_marker() {
+        for d in [
+            "elm-stuff",
+            ".ipynb_checkpoints",
+            ".hypothesis",
+            "htmlcov",
+            "cmake-build-debug",
+            "cmake-build-release",
+        ] {
+            assert!(match_dir(d, &set(&[])).is_some(), "{d} should match");
+        }
+    }
+
+    #[test]
+    fn go_vendor_requires_go_mod() {
+        assert!(match_dir("vendor", &set(&["go.mod"])).is_some());
+        // a bare vendor/ with no project marker is left alone
+        assert!(match_dir("vendor", &set(&["README.md"])).is_none());
+    }
+
+    #[test]
+    fn php_vendor_requires_composer_json() {
+        assert!(match_dir("vendor", &set(&["composer.json"])).is_some());
+    }
+
+    #[test]
+    fn maven_target_requires_pom_xml() {
+        assert!(match_dir("target", &set(&["pom.xml"])).is_some());
+        // still matches Cargo projects, and still ignored without a marker
+        assert!(match_dir("target", &set(&["Cargo.toml"])).is_some());
+        assert!(match_dir("target", &set(&[])).is_none());
+    }
+
+    #[test]
+    fn storybook_static_requires_package_json() {
+        assert!(match_dir("storybook-static", &set(&["package.json"])).is_some());
+        assert!(match_dir("storybook-static", &set(&[])).is_none());
+    }
+
+    #[test]
+    fn unreal_dirs_require_uproject() {
+        assert!(match_dir("Intermediate", &set(&["Game.uproject"])).is_some());
+        assert!(match_dir("DerivedDataCache", &set(&["Game.uproject"])).is_some());
+        assert!(match_dir("Intermediate", &set(&["README.md"])).is_none());
     }
 }
