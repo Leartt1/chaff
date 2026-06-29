@@ -7,6 +7,11 @@ All notable changes to chaff are documented here. Format follows
 ## [Unreleased]
 
 ### Added
+- **Custom artifact rules via config** — `[[rule]]` tables in `config.toml`
+  (`dir`, `ecosystem`, optional `requires_marker` / `requires_marker_ext`) are
+  added to the built-ins, so teams can reclaim their own regenerable dirs.
+  Ambiguous names should be marker-gated; the usual safety (git-tracked never
+  deleted, trash, dry-run) still applies.
 - Broadened artifact coverage: Elm (`elm-stuff`), Go and PHP `vendor` (gated by
   `go.mod` / `composer.json`), Maven/Java `target` (gated by `pom.xml`),
   CMake/CLion build dirs (`cmake-build-debug` / `cmake-build-release`), Storybook

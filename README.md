@@ -79,10 +79,31 @@ CLI flags always override config (e.g. `--no-caches` turns off the config's
 `caches` for a single run). An invalid ignore pattern is reported, never
 silently dropped.
 
+### Custom artifact rules
+
+Have a framework chaff doesn't know yet? Add `[[rule]]` tables to your config —
+they're checked alongside the built-ins:
+
+```toml
+[[rule]]
+dir = ".myframework-cache"     # the directory name to reclaim
+ecosystem = "myframework"      # label shown in the table
+
+[[rule]]
+dir = "out"                    # ambiguous name? gate it on a marker file
+ecosystem = "mybuild"
+requires_marker = ["mybuild.config.js"]   # only match beside this file
+# requires_marker_ext = [".myproj"]       # ...or a file with this extension
+```
+
+A rule with no marker matches the name anywhere, so gate ambiguous names with
+`requires_marker`/`requires_marker_ext`. The usual safety still applies:
+git-tracked files are never deleted, deletes go to the trash, and `clean` is
+dry-run until `--apply`.
+
 ## Roadmap
 
 - Scheduled / automatic reclaim
-- Custom artifact rules via config
 
 ## GitHub Action
 
