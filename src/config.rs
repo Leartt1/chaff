@@ -1,3 +1,4 @@
+use crate::rules;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
@@ -12,6 +13,43 @@ pub struct Config {
     pub caches: bool,
     /// Glob patterns to always protect (same syntax as `.chaffignore`).
     pub ignore: Vec<String>,
+    /// Custom artifact rules (`[[rule]]` tables), added to the built-ins.
+    #[serde(rename = "rule")]
+    pub rules: Vec<RawRule>,
+}
+
+/// A user-defined artifact rule from config: a directory name, its label, and
+/// optional sibling markers (exact names and/or extension suffixes) that gate an
+/// ambiguous name.
+#[derive(Debug, Default, Deserialize)]
+#[serde(default)]
+pub struct RawRule {
+    pub dir: String,
+    pub ecosystem: String,
+    pub requires_marker: Vec<String>,
+    pub requires_marker_ext: Vec<String>,
+}
+
+/// Convert parsed `[[rule]]` entries into [`rules::Rule`]s, skipping (with a
+/// warning) any with an empty `dir`.
+fn user_rules(raw: &[RawRule]) -> Vec<rules::Rule> {
+    raw.iter()
+        .filter_map(|r| {
+            let dir = r.dir.trim();
+            if dir.is_empty() {
+                eprintln!("chaff: ignoring custom rule with empty 'dir'");
+                return None;
+            }
+            let eco = r.ecosystem.trim();
+            let eco = if eco.is_empty() { "custom" } else { eco };
+            Some(rules::user_rule(
+                dir.to_string(),
+                eco.to_string(),
+                r.requires_marker.clone(),
+                r.requires_marker_ext.clone(),
+            ))
+        })
+        .collect()
 }
 
 /// Resolved settings: config defaults plus all ignore patterns compiled.
@@ -125,6 +163,7 @@ pub fn build_globset(patterns: &[String]) -> GlobSet {
 /// Load config + every `.chaffignore` (global and per-root) into one `Settings`.
 pub fn load(roots: &[PathBuf]) -> Settings {
     let cfg = load_config_file();
+    rules::set_user_rules(user_rules(&cfg.rules));
     let mut patterns: Vec<String> = cfg.ignore.clone();
 
     if let Some(home) = config_home() {
@@ -203,5 +242,28 @@ mod tests {
         assert_eq!(c.older_than.as_deref(), Some("30d"));
         assert!(c.caches);
         assert_eq!(c.ignore, vec!["foo".to_string()]);
+    }
+
+    #[test]
+    fn parses_custom_rules() {
+        let c: Config = toml::from_str(
+            "[[rule]]\ndir = \".mycache\"\necosystem = \"mine\"\nrequires_marker = [\"my.json\"]\n",
+        )
+        .unwrap();
+        assert_eq!(c.rules.len(), 1);
+        assert_eq!(c.rules[0].dir, ".mycache");
+        assert_eq!(c.rules[0].ecosystem, "mine");
+        assert_eq!(c.rules[0].requires_marker, vec!["my.json".to_string()]);
+
+        // Conversion produces a usable rule that matches beside its marker.
+        let ur = user_rules(&c.rules);
+        let set: std::collections::HashSet<String> = ["my.json".to_string()].into_iter().collect();
+        assert!(rules::match_dir_with(".mycache", &set, &ur).is_some());
+    }
+
+    #[test]
+    fn skips_custom_rule_with_empty_dir() {
+        let c: Config = toml::from_str("[[rule]]\ndir = \"\"\necosystem = \"x\"\n").unwrap();
+        assert!(user_rules(&c.rules).is_empty());
     }
 }

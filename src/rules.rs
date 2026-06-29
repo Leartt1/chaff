@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::sync::OnceLock;
 
 /// A removable, regenerable artifact directory.
 ///
@@ -294,11 +295,62 @@ pub const RULES: &[Rule] = &[
     },
 ];
 
-/// Return the matching rule for a directory `name`, given the set of sibling
-/// file names (used to satisfy marker requirements).
+/// User-defined rules from config, registered once at startup. Held in a static
+/// so references into it are effectively `'static`.
+static USER_RULES: OnceLock<Vec<Rule>> = OnceLock::new();
+
+/// Register user-defined rules (from `config.toml`). Call once at startup; later
+/// calls are ignored.
+pub fn set_user_rules(rules: Vec<Rule>) {
+    let _ = USER_RULES.set(rules);
+}
+
+/// Build a [`Rule`] from owned strings (a user rule from config), leaking them to
+/// `'static`. Intended to run once at startup, so the leak lives for the process.
+pub fn user_rule(
+    dir: String,
+    ecosystem: String,
+    requires_marker: Vec<String>,
+    requires_marker_ext: Vec<String>,
+) -> Rule {
+    Rule {
+        dir: leak_str(dir),
+        ecosystem: leak_str(ecosystem),
+        requires_marker: leak_slice(requires_marker),
+        requires_marker_ext: leak_slice(requires_marker_ext),
+    }
+}
+
+fn leak_str(s: String) -> &'static str {
+    Box::leak(s.into_boxed_str())
+}
+
+fn leak_slice(items: Vec<String>) -> &'static [&'static str] {
+    let leaked: Vec<&'static str> = items.into_iter().map(leak_str).collect();
+    Box::leak(leaked.into_boxed_slice())
+}
+
+/// Return the matching rule for directory `name`: built-ins first, then any
+/// registered user rules.
 pub fn match_dir(name: &str, siblings: &HashSet<String>) -> Option<&'static Rule> {
-    RULES
+    let user: &'static [Rule] = USER_RULES.get().map(Vec::as_slice).unwrap_or(&[]);
+    match_dir_with(name, siblings, user)
+}
+
+/// Match against the built-ins plus an explicit slice of `user` rules. Lets tests
+/// supply rules without touching the global registry.
+pub fn match_dir_with<'a>(
+    name: &str,
+    siblings: &HashSet<String>,
+    user: &'a [Rule],
+) -> Option<&'a Rule> {
+    if let Some(r) = RULES
         .iter()
+        .find(|r| r.dir == name && marker_satisfied(r, siblings))
+    {
+        return Some(r);
+    }
+    user.iter()
         .find(|r| r.dir == name && marker_satisfied(r, siblings))
 }
 
@@ -436,5 +488,21 @@ mod tests {
         assert!(match_dir("Intermediate", &set(&["Game.uproject"])).is_some());
         assert!(match_dir("DerivedDataCache", &set(&["Game.uproject"])).is_some());
         assert!(match_dir("Intermediate", &set(&["README.md"])).is_none());
+    }
+
+    #[test]
+    fn user_rules_extend_matching_and_respect_markers() {
+        let user = vec![user_rule(
+            ".myframework".to_string(),
+            "internal".to_string(),
+            vec!["myframework.json".to_string()],
+            vec![],
+        )];
+        // user rule matches only beside its marker
+        let hit = match_dir_with(".myframework", &set(&["myframework.json"]), &user);
+        assert_eq!(hit.map(|r| r.ecosystem), Some("internal"));
+        assert!(match_dir_with(".myframework", &set(&[]), &user).is_none());
+        // built-ins still match when user rules are present
+        assert!(match_dir_with("__pycache__", &set(&[]), &user).is_some());
     }
 }
