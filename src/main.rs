@@ -41,6 +41,9 @@ enum Command {
         /// Only show items at least this big (e.g. 100M, 1.5G).
         #[arg(long)]
         min_size: Option<String>,
+        /// Limit to these ecosystems/types, comma-separated (e.g. node,rust,cache).
+        #[arg(long = "type", value_delimiter = ',')]
+        types: Vec<String>,
         /// Show only the N largest items (total still reflects everything).
         #[arg(long)]
         top: Option<usize>,
@@ -124,6 +127,15 @@ enum SortKey {
     Name,
 }
 
+/// Keep only items whose ecosystem or label matches one of `types`. No-op when
+/// `types` is empty.
+fn filter_types(items: &mut Vec<model::Reclaimable>, types: &[String]) {
+    if types.is_empty() {
+        return;
+    }
+    items.retain(|i| types.iter().any(|t| t == i.ecosystem || t == i.label));
+}
+
 /// Sort reclaimables in place by the chosen key.
 fn sort_items(items: &mut [model::Reclaimable], key: SortKey) {
     match key {
@@ -147,6 +159,7 @@ fn main() -> anyhow::Result<()> {
             no_caches,
             json,
             min_size,
+            types,
             top,
             sort,
             quiet,
@@ -168,6 +181,7 @@ fn main() -> anyhow::Result<()> {
             items.retain(|i| !config::is_ignored(&settings.ignore, &i.path));
             let ignored = before - items.len();
             items.retain(|i| i.size >= min_size);
+            filter_types(&mut items, &types);
             sort_items(&mut items, sort);
 
             if json {
@@ -292,5 +306,32 @@ mod tests {
         assert_eq!(v[0].path, PathBuf::from("/a"));
         sort_items(&mut v, SortKey::Age);
         assert_eq!(v[0].size, 300);
+    }
+
+    #[test]
+    fn filter_types_keeps_matching_ecosystem_or_label() {
+        let mk = |eco: &'static str, label: &'static str| model::Reclaimable {
+            path: PathBuf::from("/x"),
+            ecosystem: eco,
+            label,
+            size: 1,
+            modified: None,
+        };
+        let mut v = vec![
+            mk("node", "node_modules"),
+            mk("rust", "target"),
+            mk("python", "__pycache__"),
+        ];
+        // matches by ecosystem
+        filter_types(&mut v, &["rust".to_string(), "node".to_string()]);
+        assert_eq!(v.len(), 2);
+        // matches by label too
+        filter_types(&mut v, &["node_modules".to_string()]);
+        assert_eq!(v.len(), 1);
+        assert_eq!(v[0].ecosystem, "node");
+        // empty types is a no-op
+        let mut all = vec![mk("a", "b"), mk("c", "d")];
+        filter_types(&mut all, &[]);
+        assert_eq!(all.len(), 2);
     }
 }
