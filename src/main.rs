@@ -47,6 +47,9 @@ enum Command {
         /// Exclude these ecosystems/types, comma-separated (applied after --type).
         #[arg(long = "exclude-type", value_delimiter = ',')]
         exclude_types: Vec<String>,
+        /// Only items untouched for at least this long (e.g. 30d, 2w, 6mo).
+        #[arg(long)]
+        older_than: Option<String>,
         /// Show only the N largest items (total still reflects everything).
         #[arg(long)]
         top: Option<usize>,
@@ -154,6 +157,19 @@ fn exclude_types_filter(items: &mut Vec<model::Reclaimable>, types: &[String]) {
     items.retain(|i| !types.iter().any(|t| t == i.ecosystem || t == i.label));
 }
 
+/// Keep only items untouched for at least `min_age`. Items with no known
+/// modification time are dropped (we can't prove they're old enough). No-op when
+/// `min_age` is `None`.
+fn filter_older_than(items: &mut Vec<model::Reclaimable>, min_age: Option<std::time::Duration>) {
+    if let Some(age) = min_age {
+        items.retain(|i| {
+            i.modified
+                .and_then(|m| m.elapsed().ok())
+                .is_some_and(|elapsed| elapsed >= age)
+        });
+    }
+}
+
 /// Sort reclaimables in place by the chosen key.
 fn sort_items(items: &mut [model::Reclaimable], key: SortKey) {
     match key {
@@ -179,6 +195,7 @@ fn main() -> anyhow::Result<()> {
             min_size,
             types,
             exclude_types,
+            older_than,
             top,
             sort,
             quiet,
@@ -200,9 +217,17 @@ fn main() -> anyhow::Result<()> {
             let before = items.len();
             items.retain(|i| !config::is_ignored(&settings.ignore, &i.path));
             let ignored = before - items.len();
+            let older_eff =
+                match older_than {
+                    Some(s) => Some(util::parse_age(&s).ok_or_else(|| {
+                        anyhow::anyhow!("bad --older-than '{s}' (try 30d, 2w, 6mo)")
+                    })?),
+                    None => None,
+                };
             items.retain(|i| i.size >= min_size);
             filter_types(&mut items, &types);
             exclude_types_filter(&mut items, &exclude_types);
+            filter_older_than(&mut items, older_eff);
             sort_items(&mut items, sort);
 
             if json {
@@ -358,6 +383,25 @@ mod tests {
         // empty types is a no-op
         let mut all = vec![mk("a", "b"), mk("c", "d")];
         filter_types(&mut all, &[]);
+        assert_eq!(all.len(), 2);
+    }
+
+    #[test]
+    fn filter_older_than_keeps_only_old_enough() {
+        use std::time::{Duration, SystemTime};
+        let mk = |age_days: u64, modified: bool| model::Reclaimable {
+            path: PathBuf::from("/x"),
+            ecosystem: "e",
+            label: "l",
+            size: 1,
+            modified: modified.then(|| SystemTime::now() - Duration::from_secs(age_days * 86_400)),
+        };
+        let mut v = vec![mk(40, true), mk(5, true), mk(0, false)];
+        filter_older_than(&mut v, Some(Duration::from_secs(30 * 86_400)));
+        assert_eq!(v.len(), 1); // only the 40-day-old one
+                                // None is a no-op
+        let mut all = vec![mk(1, true), mk(2, true)];
+        filter_older_than(&mut all, None);
         assert_eq!(all.len(), 2);
     }
 
