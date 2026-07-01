@@ -8,6 +8,7 @@ use std::time::Duration;
 pub struct CleanOptions {
     pub older_than: Option<Duration>,
     pub types: Vec<String>,
+    pub exclude_types: Vec<String>,
     pub all: bool,
     pub apply: bool,
     pub force: bool,
@@ -34,6 +35,14 @@ pub fn eligible(item: &Reclaimable, opts: &CleanOptions) -> Result<(), Skip> {
             .types
             .iter()
             .any(|t| t == item.ecosystem || t == item.label)
+    {
+        return Err(Skip::WrongType);
+    }
+
+    if opts
+        .exclude_types
+        .iter()
+        .any(|t| t == item.ecosystem || t == item.label)
     {
         return Err(Skip::WrongType);
     }
@@ -175,6 +184,7 @@ pub fn run_interactive(
     let opts = CleanOptions {
         older_than,
         types: vec![],
+        exclude_types: vec![],
         all: true,
         apply: true,
         force,
@@ -229,6 +239,7 @@ mod tests {
         CleanOptions {
             older_than: None,
             types: vec![],
+            exclude_types: vec![],
             all: true,
             apply: false,
             force: true, // skip the git check in unit tests
@@ -246,6 +257,17 @@ mod tests {
         assert_eq!(eligible(&it, &o), Err(Skip::WrongType));
         o.types = vec!["node".to_string()];
         assert_eq!(eligible(&it, &o), Ok(()));
+    }
+
+    #[test]
+    fn exclude_type_filter_drops_matching() {
+        let mut o = opts();
+        o.exclude_types = vec!["node".to_string()];
+        assert_eq!(
+            eligible(&item("node", "node_modules", 1), &o),
+            Err(Skip::WrongType)
+        );
+        assert_eq!(eligible(&item("rust", "target", 1), &o), Ok(()));
     }
 
     #[test]

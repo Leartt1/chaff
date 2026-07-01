@@ -73,6 +73,9 @@ enum Command {
         /// Limit to these ecosystems/types, comma-separated (e.g. node,rust,cache).
         #[arg(long = "type", value_delimiter = ',')]
         types: Vec<String>,
+        /// Exclude these ecosystems/types, comma-separated (applied after --type).
+        #[arg(long = "exclude-type", value_delimiter = ',')]
+        exclude_types: Vec<String>,
         /// Only items untouched for at least this long (e.g. 30d, 2w, 6mo).
         #[arg(long)]
         older_than: Option<String>,
@@ -221,6 +224,7 @@ fn main() -> anyhow::Result<()> {
             paths,
             all,
             types,
+            exclude_types,
             older_than,
             apply,
             force,
@@ -252,6 +256,7 @@ fn main() -> anyhow::Result<()> {
             let opts = clean::CleanOptions {
                 older_than: older_eff,
                 types,
+                exclude_types,
                 all,
                 apply,
                 force,
