@@ -59,6 +59,9 @@ enum Command {
         /// Also print a per-ecosystem bar chart.
         #[arg(long)]
         chart: bool,
+        /// Also print a per-ecosystem summary (size + count), largest first.
+        #[arg(long)]
+        summary: bool,
     },
     /// Reclaim space — interactive picker by default; flags for scripting.
     Clean {
@@ -177,6 +180,7 @@ fn main() -> anyhow::Result<()> {
             sort,
             quiet,
             chart,
+            summary,
         } => {
             let roots = roots_or_cwd(paths)?;
             let settings = config::load(&roots);
@@ -207,6 +211,9 @@ fn main() -> anyhow::Result<()> {
                 }
                 if chart {
                     report::print_chart(&items);
+                }
+                if summary {
+                    report::print_summary(&items);
                 }
             }
         }

@@ -156,6 +156,34 @@ pub fn print_json(items: &[Reclaimable]) {
     println!("{}", to_json(items));
 }
 
+/// Aggregate items into `(ecosystem, total_size, count)` rows, largest first
+/// (ties broken by name).
+pub fn summarize(items: &[Reclaimable]) -> Vec<(&str, u64, usize)> {
+    let mut by: BTreeMap<&str, (u64, usize)> = BTreeMap::new();
+    for i in items {
+        let e = by.entry(i.ecosystem).or_default();
+        e.0 += i.size;
+        e.1 += 1;
+    }
+    let mut rows: Vec<(&str, u64, usize)> = by.into_iter().map(|(k, (s, c))| (k, s, c)).collect();
+    rows.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(b.0)));
+    rows
+}
+
+/// Print a per-ecosystem summary: total size and item count per ecosystem,
+/// largest first, then a grand total.
+pub fn print_summary(items: &[Reclaimable]) {
+    if items.is_empty() {
+        return;
+    }
+    println!("\n{:>11}  {:>5}  ECOSYSTEM", "SIZE", "DIRS");
+    for (eco, size, count) in summarize(items) {
+        println!("{:>11}  {:>5}  {}", human(size), count, eco);
+    }
+    let total: u64 = items.iter().map(|i| i.size).sum();
+    println!("{:>11}  {:>5}  total", human(total), items.len());
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -183,6 +211,28 @@ mod tests {
         assert_eq!(visible_count(10, None), 10);
         assert_eq!(visible_count(10, Some(3)), 3);
         assert_eq!(visible_count(2, Some(5)), 2);
+    }
+
+    #[test]
+    fn summarize_totals_and_sorts_by_size() {
+        let mk = |eco: &'static str, size: u64| Reclaimable {
+            path: PathBuf::from("/x"),
+            ecosystem: eco,
+            label: "l",
+            size,
+            modified: None,
+        };
+        let items = vec![
+            mk("node", 100),
+            mk("rust", 300),
+            mk("node", 50),
+            mk("python", 300),
+        ];
+        let rows = summarize(&items);
+        // rust and python tie on size (300); python has fewer? both count 1 -> name tiebreak
+        assert_eq!(rows[0], ("python", 300, 1));
+        assert_eq!(rows[1], ("rust", 300, 1));
+        assert_eq!(rows[2], ("node", 150, 2));
     }
 
     #[test]
