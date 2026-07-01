@@ -50,6 +50,7 @@ chaff scan --summary       # per-ecosystem size + count rollup
 
 chaff clean                # interactive picker (↑/↓ · space · a all · / search · s sort · enter)
 chaff clean --older-than 30d --type node   # targeted
+chaff clean --exclude-type node --all --apply  # everything except node
 chaff clean --all --apply  # reclaim everything safe, for real (to trash)
 chaff clean --json         # JSON of what clean would reclaim (never deletes)
 chaff clean --all --apply --purge   # permanently delete (frees space now; not recoverable)
