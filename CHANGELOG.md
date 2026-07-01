@@ -7,6 +7,10 @@ All notable changes to chaff are documented here. Format follows
 ## [Unreleased]
 
 ### Added
+- More artifact coverage: Nim (`nimcache`), Expo (`.expo`), Godot (`.godot`),
+  Haskell/cabal (`dist-newstyle`), Scala (`.bloop`, `.metals`, and sbt `target`
+  gated by `build.sbt`), OCaml/dune (`_build` gated by `dune-project`), Jekyll
+  (`_site` gated by `_config.yml`), and Python `.eggs`.
 - **Custom artifact rules via config** — `[[rule]]` tables in `config.toml`
   (`dir`, `ecosystem`, optional `requires_marker` / `requires_marker_ext`) are
   added to the built-ins, so teams can reclaim their own regenerable dirs.
