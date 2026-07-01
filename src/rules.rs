@@ -293,6 +293,70 @@ pub const RULES: &[Rule] = &[
         requires_marker: &[],
         requires_marker_ext: &[".uproject"],
     },
+    // v0.8 — broadened coverage
+    Rule {
+        dir: "nimcache",
+        ecosystem: "nim",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".expo",
+        ecosystem: "expo",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".godot",
+        ecosystem: "godot",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: "dist-newstyle",
+        ecosystem: "haskell",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".bloop",
+        ecosystem: "scala",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".metals",
+        ecosystem: "scala",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    Rule {
+        dir: ".eggs",
+        ecosystem: "python",
+        requires_marker: &[],
+        requires_marker_ext: &[],
+    },
+    // OCaml/dune also uses `_build` — gate the extra match on dune-project.
+    Rule {
+        dir: "_build",
+        ecosystem: "ocaml",
+        requires_marker: &["dune-project"],
+        requires_marker_ext: &[],
+    },
+    // sbt/Scala also builds into `target` — gate on build.sbt.
+    Rule {
+        dir: "target",
+        ecosystem: "sbt",
+        requires_marker: &["build.sbt"],
+        requires_marker_ext: &[],
+    },
+    // Jekyll output — gate the generic `_site` name on a Jekyll config.
+    Rule {
+        dir: "_site",
+        ecosystem: "jekyll",
+        requires_marker: &["_config.yml"],
+        requires_marker_ext: &[],
+    },
 ];
 
 /// User-defined rules from config, registered once at startup. Held in a static
@@ -488,6 +552,40 @@ mod tests {
         assert!(match_dir("Intermediate", &set(&["Game.uproject"])).is_some());
         assert!(match_dir("DerivedDataCache", &set(&["Game.uproject"])).is_some());
         assert!(match_dir("Intermediate", &set(&["README.md"])).is_none());
+    }
+
+    #[test]
+    fn unambiguous_v08_caches_match_without_marker() {
+        for d in [
+            "nimcache",
+            ".expo",
+            ".godot",
+            "dist-newstyle",
+            ".bloop",
+            ".metals",
+            ".eggs",
+        ] {
+            assert!(match_dir(d, &set(&[])).is_some(), "{d} should match");
+        }
+    }
+
+    #[test]
+    fn ocaml_build_requires_dune_project() {
+        assert!(match_dir("_build", &set(&["dune-project"])).is_some());
+        // still matches elixir projects, and stays gated otherwise
+        assert!(match_dir("_build", &set(&["mix.exs"])).is_some());
+        assert!(match_dir("_build", &set(&["README.md"])).is_none());
+    }
+
+    #[test]
+    fn sbt_target_requires_build_sbt() {
+        assert!(match_dir("target", &set(&["build.sbt"])).is_some());
+    }
+
+    #[test]
+    fn jekyll_site_requires_config() {
+        assert!(match_dir("_site", &set(&["_config.yml"])).is_some());
+        assert!(match_dir("_site", &set(&[])).is_none());
     }
 
     #[test]
