@@ -46,6 +46,7 @@ chaff scan --exclude-type node # everything except node
 chaff scan --sort age      # sort by age (oldest first); also: size, name
 chaff scan -q              # quiet: just the table, no extra notes
 chaff scan --chart         # add a per-ecosystem bar chart
+chaff scan --summary       # per-ecosystem size + count rollup
 
 chaff clean                # interactive picker (↑/↓ · space · a all · / search · s sort · enter)
 chaff clean --older-than 30d --type node   # targeted
