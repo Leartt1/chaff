@@ -7,6 +7,9 @@ All notable changes to chaff are documented here. Format follows
 ## [Unreleased]
 
 ### Added
+- New scan/clean filters: `scan --summary` (per-ecosystem size + count rollup),
+  `--exclude-type` on both `scan` and `clean`, and `scan --older-than` (age
+  filter, matching `clean`).
 - More artifact coverage: Nim (`nimcache`), Expo (`.expo`), Godot (`.godot`),
   Haskell/cabal (`dist-newstyle`), Scala (`.bloop`, `.metals`, and sbt `target`
   gated by `build.sbt`), OCaml/dune (`_build` gated by `dune-project`), Jekyll
